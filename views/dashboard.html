@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ระบบทุนการศึกษา</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+
+<style>
+/* CSS Shared Styles */
+:root { --swu-red: #dd1f28; --swu-gray: #f0f2f5; --text-dark: #333; --card-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+body { background-color: var(--swu-gray); font-family: 'Prompt', sans-serif; color: var(--text-dark); padding-top: 80px; min-height: 100vh; display: flex; flex-direction: column; }
+.navbar { background-color: white; box-shadow: 0 2px 10px rgba(0,0,0,0.05); height: 70px; }
+.navbar-brand img { height: 40px; }
+.nav-link { font-weight: 500; color: #555; margin-right: 15px; border-radius: 8px; padding: 8px 16px !important; transition: all 0.2s; }
+.nav-link:hover, .nav-link.active { background-color: #ffe6e6; color: var(--swu-red); }
+.card-custom { border: none; border-radius: 12px; background: white; box-shadow: var(--card-shadow); margin-bottom: 20px; transition: transform 0.2s; }
+.card-custom:hover { transform: translateY(-2px); }
+.section-title { font-weight: 600; margin-bottom: 20px; border-left: 5px solid var(--swu-red); padding-left: 10px; line-height: 1.2; }
+.footer { text-align: center; margin-top: auto; padding: 30px 20px; color: #888; font-size: 13px; border-top: 1px solid #e0e0e0; }
+
+/* Timeline Styles */
+.steps { display: flex; justify-content: space-between; align-items: center; position: relative; margin-bottom: 30px; }
+.steps::before { content: ""; position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: #e9ecef; z-index: 0; transform: translateY(-50%); }
+.step-item { z-index: 1; background: var(--swu-gray); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #999; font-weight: bold; border: 3px solid white; font-size: 14px; }
+.step-item.active { background: var(--swu-red); color: white; box-shadow: 0 0 0 3px #ffe6e6; }
+.step-item.completed { background: #198754; color: white; }
+.step-label { position: absolute; top: 45px; font-size: 11px; width: 80px; text-align: center; margin-left: -20px; color: #666; }
+</style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg fixed-top">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="/dashboard">
+        <img src="/images/swu_logo2.png" alt="Logo">
+        <span class="ms-2 fs-6 fw-bold text-dark d-none d-md-block">ระบบทุนการศึกษา</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav me-auto ms-4">
+        <!-- เมนูซ้าย: เหลือแค่ 2 เมนู (หน้าหลัก, ทุนการศึกษา) -->
+        <li class="nav-item">
+          <a class="nav-link active" href="/dashboard"><i class="fa-solid fa-house me-1"></i> หน้าหลัก</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/scholarships"><i class="fa-solid fa-graduation-cap me-1"></i> ทุนการศึกษา</a>
+        </li>
+      </ul>
+
+      <!-- User Dropdown -->
+      <div class="dropdown">
+        <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark" id="userDrop" data-bs-toggle="dropdown">
+            <div class="text-end me-2 lh-1 d-none d-sm-block">
+                <div class="fw-bold" style="font-size:14px;">นายรักเรียน ศรีนครินทร์</div>
+                <small class="text-muted" style="font-size:11px;">นิสิต (661010101)</small>
+            </div>
+            <img src="https://via.placeholder.com/40" class="rounded-circle border" width="40" height="40">
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+            <!-- เมนูแก้ไขข้อมูล อยู่ตรงนี้ -->
+            <li><a class="dropdown-item" href="/profile"><i class="fa-regular fa-id-card me-2"></i> ข้อมูลส่วนตัว</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="/logout"><i class="fa-solid fa-right-from-bracket me-2"></i> ออกจากระบบ</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Content -->
+<div class="container py-4 flex-grow-1">
+    <div class="row">
+        <!-- Left: Profile Summary -->
+        <div class="col-lg-4 mb-4">
+            <div class="card card-custom p-4 text-center h-100">
+                <img src="https://via.placeholder.com/150" class="rounded-circle mx-auto mb-3 border border-4 border-light shadow-sm" width="120">
+                <h5 class="fw-bold mb-1">นายรักเรียน ศรีนครินทร์</h5>
+                <p class="text-muted mb-3">รหัสนิสิต 661010101</p>
+                <div class="text-start bg-light p-3 rounded-3 mt-2 font-monospace" style="font-size: 0.9rem;">
+                    <div class="mb-2 d-flex justify-content-between"><span>คณะ:</span> <span class="fw-bold text-dark">วิทยาศาสตร์</span></div>
+                    <div class="mb-2 d-flex justify-content-between"><span>สาขา:</span> <span class="fw-bold text-dark">วิทยาการคอมพิวเตอร์</span></div>
+                    <div class="mb-2 d-flex justify-content-between"><span>GPAX:</span> <span class="fw-bold text-success">3.50</span></div>
+                    <div class="mb-0 d-flex justify-content-between"><span>ที่ปรึกษา:</span> <span class="fw-bold text-dark">อ.ใจดี มีเมตตา</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Dashboard Content -->
+        <div class="col-lg-8">
+            <!-- 1. Tracking Status -->
+            <div class="card card-custom p-4">
+                <h5 class="section-title">ติดตามสถานะทุน (ปีการศึกษา 2566)</h5>
+                <div class="alert alert-warning border-0 d-flex align-items-center text-dark bg-opacity-10" style="background-color: #ffecb5;">
+                    <i class="fa-solid fa-clock me-2"></i> ท่านกำลังสมัคร: <strong> ทุนจ้างงาน (ก.ย. 66)</strong>
+                </div>
+                <div class="px-2 mt-5 mb-4">
+                    <div class="steps">
+                        <div class="step-item completed"><i class="fa-solid fa-file-arrow-up"></i><div class="step-label">ยื่นใบสมัคร</div></div>
+                        <div class="step-item completed"><i class="fa-solid fa-user-check"></i><div class="step-label">อจ.รับรอง</div></div>
+                        <div class="step-item active"><i class="fa-solid fa-comments"></i><div class="step-label fw-bold text-danger">รอสัมภาษณ์</div></div>
+                        <div class="step-item"><i class="fa-solid fa-bullhorn"></i><div class="step-label">ประกาศผล</div></div>
+                    </div>
+                </div>
+                <small class="text-muted text-center">* กรุณาตรวจสอบอีเมลเพื่อยืนยันวันเวลานัดสัมภาษณ์</small>
+            </div>
+
+            <!-- 2. New Announcements -->
+            <div class="card card-custom p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="section-title mb-0">ประกาศทุนใหม่</h5>
+                    <!-- ลิงก์ไปหน้า scholarships.html -->
+                    <a href="/scholarships" class="text-decoration-none small text-danger">ดูทั้งหมด <i class="fa-solid fa-arrow-right"></i></a>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="/scholarships" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                        <div><span class="badge bg-danger text-white me-2">New</span> <span class="fw-bold">ทุนเรียนดี ประจำปี 2567</span></div>
+                        <i class="fa-solid fa-chevron-right text-muted small"></i>
+                    </a>
+                    <a href="/scholarships" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                        <div><span class="badge bg-warning text-dark me-2">ด่วน</span> <span class="fw-bold">ทุนวิจัยสำหรับนิสิตปริญญาตรี</span></div>
+                        <i class="fa-solid fa-chevron-right text-muted small"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 3. History -->
+            <div class="card card-custom p-4">
+                <h5 class="section-title">ประวัติการได้รับทุน</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr><th>ปีการศึกษา</th><th>ชื่อทุน</th><th class="text-end">จำนวนเงิน</th><th class="text-center">สถานะ</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>2565</td><td>ทุนขัดสน (เทอม 2)</td><td class="text-end">5,000</td><td class="text-center"><span class="badge bg-success rounded-pill">อนุมัติ</span></td></tr>
+                            <tr><td>2565</td><td>ทุนอาหารกลางวัน</td><td class="text-end">3,000</td><td class="text-center"><span class="badge bg-success rounded-pill">อนุมัติ</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    Copyright © Srinakharinwirot University<br>
+    114 Sukhumvit 23, Bangkok 10110, Thailand. E-mail : contact@g.swu.ac.th
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
