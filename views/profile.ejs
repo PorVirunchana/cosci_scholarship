@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>แก้ไขข้อมูลส่วนตัว - ระบบทุนการศึกษา</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+/* Shared CSS */
+:root { --swu-red: #dd1f28; --swu-gray: #f0f2f5; --text-dark: #333; --card-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+body { background-color: var(--swu-gray); font-family: 'Prompt', sans-serif; color: var(--text-dark); padding-top: 80px; min-height: 100vh; display: flex; flex-direction: column; }
+.navbar { background-color: white; box-shadow: 0 2px 10px rgba(0,0,0,0.05); height: 70px; }
+.navbar-brand img { height: 40px; }
+.nav-link { font-weight: 500; color: #555; margin-right: 15px; border-radius: 8px; padding: 8px 16px !important; transition: all 0.2s; }
+.nav-link:hover, .nav-link.active { background-color: #ffe6e6; color: var(--swu-red); }
+.card-custom { border: none; border-radius: 12px; background: white; box-shadow: var(--card-shadow); margin-bottom: 20px; }
+.footer { text-align: center; margin-top: auto; padding: 30px 20px; color: #888; font-size: 13px; border-top: 1px solid #e0e0e0; }
+
+/* Readonly Input Style */
+.form-control[readonly] {
+    background-color: #f8f9fa; /* สีเทาอ่อน */
+    color: #6c757d;
+    cursor: not-allowed;
+    border-color: #eee;
+}
+.form-label {
+    font-weight: 600;
+    color: #555;
+    font-size: 0.9rem;
+}
+</style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg fixed-top">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="/dashboard">
+        <img src="/images/swu_logo2.png" alt="Logo" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Srinakharinwirot_University_Logo.png/600px-Srinakharinwirot_University_Logo.png'">
+        <span class="ms-2 fs-6 fw-bold text-dark d-none d-md-block">ระบบทุนการศึกษา</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav me-auto ms-4">
+        <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="fa-solid fa-house me-1"></i> หน้าหลัก</a></li>
+        <li class="nav-item"><a class="nav-link" href="/scholarships"><i class="fa-solid fa-graduation-cap me-1"></i> ทุนการศึกษา</a></li>
+        <li class="nav-item"><a class="nav-link" href="/student_loan"><i class="fa-solid fa-hand-holding-dollar me-1"></i> กยศ.</a></li>
+      </ul>
+      <div class="dropdown">
+        <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark" id="userDrop" data-bs-toggle="dropdown">
+            <div class="text-end me-2 lh-1 d-none d-sm-block">
+                <div class="fw-bold" style="font-size:14px;"><%= user.fullname %></div>
+                <small class="text-muted" style="font-size:11px;">นิสิต (<%= user.student_id %>)</small>
+            </div>
+            <img src="/images/student_icon.png" class="rounded-circle border" width="40" height="40" onerror="this.src='https://ui-avatars.com/api/?name=<%= user.fullname %>&background=dd1f28&color=fff'">
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+            <li><a class="dropdown-item active bg-danger text-white" href="/profile"><i class="fa-regular fa-id-card me-2"></i> ข้อมูลส่วนตัว</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="/logout"><i class="fa-solid fa-right-from-bracket me-2"></i> ออกจากระบบ</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container py-4 flex-grow-1">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="card card-custom p-4 p-md-5">
+                <h4 class="fw-bold mb-4 text-center"><i class="fa-solid fa-user-gear me-2 text-danger"></i>ข้อมูลส่วนตัว</h4>
+                
+                <form onsubmit="changePassword(event)">
+                    <div class="mb-4 text-center">
+                        <div class="position-relative d-inline-block">
+                            <img src="/images/student_icon.png" class="rounded-circle mb-2 shadow-sm" width="120" height="120" onerror="this.src='https://ui-avatars.com/api/?name=<%= user.fullname %>&background=dd1f28&color=fff'">
+                        </div>
+                    </div>
+
+                    <!-- ส่วนข้อมูลนิสิต (แก้ไขไม่ได้) -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">ชื่อ-นามสกุล</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-user text-muted"></i></span>
+                                <input type="text" class="form-control border-start-0" value="<%= user.fullname %>" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">รหัสนิสิต</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-id-card text-muted"></i></span>
+                                <input type="text" class="form-control border-start-0" value="<%= user.student_id %>" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">อีเมล</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-envelope text-muted"></i></span>
+                                <input type="text" class="form-control border-start-0" value="<%= user.email %>" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">คณะ</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-building-columns text-muted"></i></span>
+                                <input type="text" class="form-control border-start-0" value="<%= user.faculty %>" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">สาขาวิชา</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-graduation-cap text-muted"></i></span>
+                                <input type="text" class="form-control border-start-0" value="<%= user.major %>" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">อาจารย์ที่ปรึกษา</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-chalkboard-user text-muted"></i></span>
+                                <input type="text" class="form-control border-start-0" value="<%= user.adviser_name || '-' %>" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ส่วนเปลี่ยนรหัสผ่าน (แก้ไขได้) -->
+                    <div class="bg-white border p-4 rounded-4 mt-5 mb-4 shadow-sm position-relative">
+                        <span class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-danger px-3 py-2 border border-white shadow-sm">
+                            <i class="fa-solid fa-key me-1"></i> เปลี่ยนรหัสผ่าน
+                        </span>
+                        
+                        <div class="mb-3 mt-2">
+                            <label class="form-label small text-muted">รหัสผ่านปัจจุบัน <span class="text-danger">*</span></label>
+                            <input type="password" id="currentPassword" class="form-control" placeholder="ระบุรหัสผ่านปัจจุบันเพื่อยืนยัน" required>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted">รหัสผ่านใหม่ <span class="text-danger">*</span></label>
+                                <input type="password" id="newPassword" class="form-control" placeholder="กำหนดรหัสใหม่ (อย่างน้อย 6 ตัว)" required minlength="6">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted">ยืนยันรหัสผ่านใหม่ <span class="text-danger">*</span></label>
+                                <input type="password" id="confirmPassword" class="form-control" placeholder="ยืนยันรหัสใหม่อีกครั้ง" required minlength="6">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" id="btnSubmit" class="btn btn-danger py-2 fw-bold shadow-sm rounded-pill">
+                            <i class="fa-solid fa-save me-2"></i>บันทึกการเปลี่ยนแปลง
+                        </button>
+                        <a href="/dashboard" class="btn btn-light text-muted rounded-pill">ย้อนกลับ</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    Copyright © Srinakharinwirot University<br>
+    114 Sukhumvit 23, Bangkok 10110, Thailand. E-mail : contact@g.swu.ac.th
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    async function changePassword(e) {
+        e.preventDefault();
+        
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const btn = document.getElementById('btnSubmit');
+
+        if (newPassword !== confirmPassword) {
+            Swal.fire('ข้อผิดพลาด', 'รหัสผ่านใหม่ไม่ตรงกัน', 'warning');
+            return;
+        }
+
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>กำลังบันทึก...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/change-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ currentPassword, newPassword, confirmPassword })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                await Swal.fire('สำเร็จ', 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว', 'success');
+                window.location.href = '/dashboard';
+            } else {
+                Swal.fire('เกิดข้อผิดพลาด', data.message, 'error');
+                btn.innerHTML = '<i class="fa-solid fa-save me-2"></i>บันทึกการเปลี่ยนแปลง';
+                btn.disabled = false;
+            }
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+            btn.innerHTML = '<i class="fa-solid fa-save me-2"></i>บันทึกการเปลี่ยนแปลง';
+            btn.disabled = false;
+        }
+    }
+</script>
+</body>
+</html>

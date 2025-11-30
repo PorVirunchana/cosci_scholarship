@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>กยศ. - ระบบทุนการศึกษา</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+
+<style>
+/* Shared CSS */
+:root { 
+    --swu-red: #dd1f28; 
+    --swu-gray: #f8f9fa; 
+    --text-dark: #333; 
+}
+body { 
+    background-color: var(--swu-gray); 
+    font-family: 'Prompt', sans-serif; 
+    color: var(--text-dark); 
+    padding-top: 80px; 
+    min-height: 100vh; 
+    display: flex; 
+    flex-direction: column; 
+}
+
+/* --- Navbar Style --- */
+.navbar { 
+    background-color: white; 
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05); 
+    height: 70px; 
+}
+.navbar-brand img { height: 40px; }
+.nav-link { 
+    font-weight: 500; color: #555; margin-right: 15px; 
+    border-radius: 8px; padding: 8px 16px !important; transition: all 0.2s; 
+}
+.nav-link:hover, .nav-link.active { background-color: #ffe6e6; color: var(--swu-red); }
+
+/* Cards Styling */
+.card-custom { 
+    border: none; 
+    border-radius: 16px; 
+    background: white; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02); 
+    margin-bottom: 24px; 
+    overflow: hidden; 
+}
+.card-header-custom { 
+    background-color: white; 
+    border-bottom: 1px solid #f0f0f0; 
+    padding: 18px 24px; 
+    font-weight: 600; 
+    color: var(--swu-red);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.1rem;
+}
+
+/* Section 1: Stats Table */
+.table-stats th { background-color: #fff; font-weight: 600; color: #666; border-bottom: 2px solid #f0f0f0; }
+.table-stats td { border-bottom: 1px solid #f8f9fa; font-size: 0.9rem; }
+.text-stat-pass { color: #dd1f28; font-weight: bold; }
+.text-stat-fail { color: #333; font-weight: bold; }
+
+/* Section 4: Steps Images (Fixed Click Issue) */
+.step-img-container {
+    border: 1px dashed #ddd;
+    border-radius: 12px;
+    padding: 10px;
+    background: #fdfdfd;
+    cursor: zoom-in; /* เปลี่ยน cursor เป็นแว่นขยาย */
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+.step-img-container:hover {
+    background-color: #fff0f0;
+    border-color: var(--swu-red);
+    transform: translateY(-2px);
+}
+/* ไอคอนแว่นขยายตอน Hover */
+.step-img-container:hover::after {
+    content: '\f00e'; /* fa-magnifying-glass-plus */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.5rem;
+    color: var(--swu-red);
+    opacity: 0.9;
+    background: rgba(255,255,255,0.9);
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    pointer-events: none; /* สำคัญ! ป้องกันไอคอนบังการคลิก */
+}
+.step-caption { margin-top: 10px; font-size: 0.9rem; color: #666; font-weight: 500; }
+
+/* Section 5: Folder Style */
+.folder-item {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+    color: inherit;
+}
+.folder-item:hover { background-color: #fff8f8; }
+.folder-item:last-child { border-bottom: none; }
+.folder-icon {
+    font-size: 24px;
+    color: #ffc107; 
+    margin-right: 15px;
+}
+.folder-name { font-weight: 500; color: #333; }
+.folder-arrow { margin-left: auto; color: #ccc; font-size: 14px; }
+
+/* Modal File List */
+.file-list-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; border-bottom: 1px solid #eee; text-decoration: none; color: #333;
+}
+.file-list-item:hover { color: var(--swu-red); }
+.file-list-item:last-child { border-bottom: none; }
+
+/* Footer */
+.footer { text-align: center; margin-top: auto; padding: 30px 20px; color: #888; font-size: 13px; border-top: 1px solid #e0e0e0; }
+</style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg fixed-top">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="/dashboard">
+        <img src="/images/swu_logo2.png" alt="Logo" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Srinakharinwirot_University_Logo.png/600px-Srinakharinwirot_University_Logo.png'">
+        <span class="ms-2 fs-6 fw-bold text-dark d-none d-md-block">ระบบทุนการศึกษา</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav me-auto ms-4">
+        <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="fa-solid fa-house me-1"></i> หน้าหลัก</a></li>
+        <li class="nav-item"><a class="nav-link" href="/scholarships"><i class="fa-solid fa-graduation-cap me-1"></i> ทุนการศึกษา</a></li>
+        <li class="nav-item"><a class="nav-link active" href="/student_loan"><i class="fa-solid fa-hand-holding-dollar me-1"></i> กยศ.</a></li>
+      </ul>
+      <div class="dropdown">
+        <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark" id="userDrop" data-bs-toggle="dropdown">
+            <div class="text-end me-2 lh-1 d-none d-sm-block">
+                <div class="fw-bold" style="font-size:14px;"><%= user.fullname %></div>
+                <small class="text-muted" style="font-size:11px;">นิสิต (<%= user.student_id %>)</small>
+            </div>
+            <img src="/images/student_icon.png" class="rounded-circle border" width="40" height="40" onerror="this.src='https://ui-avatars.com/api/?name=<%= user.fullname %>&background=dd1f28&color=fff'">
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+            <li><a class="dropdown-item" href="/profile"><i class="fa-regular fa-id-card me-2"></i> ข้อมูลส่วนตัว</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="/logout"><i class="fa-solid fa-right-from-bracket me-2"></i> ออกจากระบบ</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container py-4 flex-grow-1">
+    
+    <div class="row g-4">
+        
+        <!-- ================= ฝั่งซ้าย ================= -->
+        <div class="col-lg-8">
+
+            <!-- 1. สถานะการกู้ยืม -->
+            <div class="card card-custom">
+                <div class="card-header-custom">
+                    <div><i class="fa-solid fa-user-clock"></i> สถานะการกู้ยืมของคุณ</div>
+                    <% if (myLoan) { %>
+                        <span class="badge bg-secondary-subtle text-dark border">ปีการศึกษา <%= myLoan.slf_year %></span>
+                    <% } %>
+                </div>
+                <div class="p-5 text-center">
+                    <% if (!myLoan) { %>
+                        <div class="py-3 text-muted">
+                            <i class="fa-solid fa-file-circle-question fa-4x mb-3 opacity-25"></i>
+                            <h5>ยังไม่พบข้อมูลการยื่นกู้ในปีนี้</h5>
+                            <p class="small">กรุณาดำเนินการยื่นคำขอในระบบ DSL และติดตามข่าวสาร</p>
+                        </div>
+                    <% } else { %>
+                        <h5 class="fw-bold mb-1 text-dark"><%= myLoan.slf_type %></h5>
+                        <p class="text-muted mb-4 small">ประเภทผู้กู้</p>
+
+                        <% if (myLoan.slf_pending == 0) { %>
+                            <div class="d-inline-block p-4 rounded-4 bg-warning bg-opacity-10 border border-warning-subtle text-warning-emphasis">
+                                <i class="fa-solid fa-hourglass-half fa-3x mb-2"></i>
+                                <h3 class="fw-bold mb-0">รอการพิจารณา</h3>
+                                <small>อยู่ระหว่างตรวจสอบเอกสาร</small>
+                            </div>
+                        <% } else if (myLoan.slf_pending == 1) { %>
+                            <div class="d-inline-block p-4 rounded-4 bg-success bg-opacity-10 border border-success-subtle text-success">
+                                <i class="fa-solid fa-circle-check fa-3x mb-2"></i>
+                                <h3 class="fw-bold mb-0">ผ่านการอนุมัติ</h3>
+                                <small>ระบบบันทึกประวัติการรับทุนเรียบร้อยแล้ว</small>
+                            </div>
+                        <% } else if (myLoan.slf_pending == 2) { %>
+                            <div class="d-inline-block p-4 rounded-4 bg-danger bg-opacity-10 border border-danger-subtle text-danger">
+                                <i class="fa-solid fa-circle-xmark fa-3x mb-2"></i>
+                                <h3 class="fw-bold mb-2">ไม่ผ่านการอนุมัติ</h3>
+                                <div class="bg-white p-2 rounded border border-danger border-opacity-25 text-start text-dark shadow-sm mt-2" style="min-width: 280px;">
+                                    <strong class="text-danger">เหตุผล:</strong> <%= myLoan.rejection_reason || 'เอกสารไม่ครบถ้วน / คุณสมบัติไม่ผ่านเกณฑ์' %>
+                                </div>
+                            </div>
+                        <% } %>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- 2. ขั้นตอนการกู้ยืม (กดเพื่อขยายภาพ) -->
+            <div class="card card-custom">
+                <div class="card-header-custom">
+                    <div><i class="fa-solid fa-list-ol"></i> ขั้นตอนการกู้ยืม</div>
+                </div>
+                <div class="p-4">
+                    <div class="row g-4 text-center">
+                        <div class="col-md-6">
+                            <!-- เพิ่ม attribute data-bs-toggle เพื่อให้มั่นใจว่าคลิกได้ -->
+                            <div class="step-img-container" data-bs-toggle="modal" data-bs-target="#modalStep1">
+                                <img src="/images/loan1.png" class="img-fluid rounded" alt="ขั้นตอน DSL" onerror="this.src='https://via.placeholder.com/500x300?text=Image+Not+Found'">
+                            </div>
+                            <div class="step-caption">กำหนดการขั้นตอนการกู้ยืม</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="step-img-container" data-bs-toggle="modal" data-bs-target="#modalStep2">
+                                <img src="/images/loan2.png" class="img-fluid rounded" alt="ขั้นตอนส่งเอกสาร" onerror="this.src='https://via.placeholder.com/500x300?text=Image+Not+Found'">
+                            </div>
+                            <div class="step-caption">ขั้นตอนการกู้ยืมของมหาวิทยาลัย</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. ดาวน์โหลดแบบฟอร์ม -->
+            <div class="card card-custom">
+                <div class="card-header-custom">
+                    <div><i class="fa-solid fa-folder-open"></i> ดาวน์โหลดแบบฟอร์ม</div>
+                </div>
+                <div class="p-0">
+                    <div class="folder-item" data-bs-toggle="modal" data-bs-target="#modalForm1">
+                        <i class="fa-solid fa-folder folder-icon"></i>
+                        <span class="folder-name">แบบฟอร์มประกอบการยื่นคำขอ</span>
+                        <i class="fa-solid fa-chevron-right folder-arrow"></i>
+                    </div>
+                    <div class="folder-item" data-bs-toggle="modal" data-bs-target="#modalForm2">
+                        <i class="fa-solid fa-folder folder-icon"></i>
+                        <span class="folder-name">ผู้กู้รายใหม่</span>
+                        <i class="fa-solid fa-chevron-right folder-arrow"></i>
+                    </div>
+                    <div class="folder-item" data-bs-toggle="modal" data-bs-target="#modalForm3">
+                        <i class="fa-solid fa-folder folder-icon"></i>
+                        <span class="folder-name">ผู้กู้รายเก่า</span>
+                        <i class="fa-solid fa-chevron-right folder-arrow"></i>
+                    </div>
+                    <div class="folder-item" data-bs-toggle="modal" data-bs-target="#modalForm4">
+                        <i class="fa-solid fa-folder folder-icon"></i>
+                        <span class="folder-name">หลักสูตรขอบเขตค่าเล่าเรียน</span>
+                        <i class="fa-solid fa-chevron-right folder-arrow"></i>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ================= ฝั่งขวา ================= -->
+        <div class="col-lg-4">
+            
+            <!-- 1. ประกาศจากมหาลัย -->
+            <div class="card card-custom">
+                <div class="card-header-custom bg-danger text-white">
+                    <div><i class="fa-solid fa-bullhorn me-2"></i> ประกาศจากมหาวิทยาลัย</div>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action py-3">
+                        <div class="d-flex w-100 justify-content-between align-items-center">
+                            <h6 class="mb-1 fw-bold text-danger" style="font-size: 0.95rem;">กำหนดการส่งเอกสาร กยศ.</h6>
+                            <span class="badge bg-secondary-subtle text-dark">PDF</span>
+                        </div>
+                        <small class="text-muted">สำหรับภาคเรียนที่ 1 ปีการศึกษา 2567</small>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action py-3">
+                        <div class="d-flex w-100 justify-content-between align-items-center">
+                            <h6 class="mb-1 fw-bold text-danger" style="font-size: 0.95rem;">คู่มือการกู้ยืม (ฉบับย่อ)</h6>
+                            <span class="badge bg-secondary-subtle text-dark">PDF</span>
+                        </div>
+                        <small class="text-muted">ขั้นตอนและเอกสารที่ต้องเตรียม</small>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 2. สถิติผู้กู้ -->
+            <div class="card card-custom">
+                <div class="card-header-custom">
+                    <div><i class="fa-solid fa-chart-simple"></i> สถิติผู้กู้ยืม กยศ.</div>
+                </div>
+                <div class="p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle text-center mb-0 table-stats">
+                            <thead>
+                                <tr>
+                                    <th class="py-3 ps-3 text-start">ปีการศึกษา</th>
+                                    <th class="text-success">ผ่าน</th>
+                                    <th class="text-danger">ไม่ผ่าน</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% const years = Object.keys(stats).sort((a,b) => b-a); %>
+                                <% if (years.length > 0) { %>
+                                    <% years.forEach(year => { %>
+                                        <tr>
+                                            <td class="fw-bold ps-3 text-start"><%= year %></td>
+                                            <td class="text-stat-pass"><%= stats[year].pass %></td>
+                                            <td class="text-stat-fail"><%= stats[year].fail %></td>
+                                        </tr>
+                                    <% }); %>
+                                <% } else { %>
+                                    <tr><td colspan="3" class="text-muted py-4">ไม่มีข้อมูลสถิติ</td></tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. ช่องทางการติดต่อ -->
+            <div class="card card-custom p-4 bg-dark text-white" style="background: linear-gradient(135deg, #2c3e50, #34495e);">
+                <h6 class="fw-bold mb-3 border-bottom border-secondary pb-2"><i class="fa-solid fa-headset me-2"></i>ช่องทางการติดต่อ</h6>
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-white bg-opacity-10 p-2 rounded-3 me-3 text-info"><i class="fa-solid fa-building fa-lg"></i></div>
+                    <div>
+                        <div class="small text-light opacity-75">สถานที่ติดต่อ</div>
+                        <div class="fw-bold" style="font-size: 0.9rem;">กองกิจการนิสิต ชั้น 2</div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-white bg-opacity-10 p-2 rounded-3 me-3 text-info"><i class="fa-solid fa-phone fa-lg"></i></div>
+                    <div>
+                        <div class="small text-light opacity-75">เบอร์โทรศัพท์</div>
+                        <div class="fw-bold" style="font-size: 0.9rem;">02-649-5000 ต่อ 15321</div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div class="bg-white bg-opacity-10 p-2 rounded-3 me-3 text-info"><i class="fa-brands fa-facebook fa-lg"></i></div>
+                    <div>
+                        <div class="small text-light opacity-75">Facebook</div>
+                        <div class="fw-bold" style="font-size: 0.9rem;">งานแนะแนวและทุนฯ</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<div class="footer">
+    Copyright © Srinakharinwirot University<br>
+    114 Sukhumvit 23, Bangkok 10110, Thailand. E-mail : contact@g.swu.ac.th
+</div>
+
+<!-- Modals สำหรับรูปภาพขั้นตอน (Lightbox) -->
+<div class="modal fade" id="modalStep1" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content bg-transparent border-0">
+      <div class="modal-body p-0 text-center position-relative">
+        <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
+        <img src="/images/loan1.png" class="img-fluid rounded shadow-lg" alt="ขั้นตอนที่ 1" onerror="this.src='https://via.placeholder.com/800x600?text=Image+Not+Found'">
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalStep2" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content bg-transparent border-0">
+      <div class="modal-body p-0 text-center position-relative">
+        <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
+        <img src="/images/loan2.png" class="img-fluid rounded shadow-lg" alt="ขั้นตอนที่ 2" onerror="this.src='https://via.placeholder.com/800x600?text=Image+Not+Found'">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modals สำหรับ Folder -->
+<!-- Modal 1 -->
+<div class="modal fade" id="modalForm1" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="fa-solid fa-folder-open text-warning me-2"></i>แบบฟอร์มประกอบการยื่นคำขอ</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <a href="#" class="file-list-item">
+            <span><i class="fa-regular fa-file-pdf me-2 text-danger"></i> แบบคำขอกู้ยืมเงิน (กยศ. 101)</span>
+            <i class="fa-solid fa-download text-secondary"></i>
+        </a>
+        <a href="#" class="file-list-item">
+            <span><i class="fa-regular fa-file-pdf me-2 text-danger"></i> หนังสือรับรองรายได้ครอบครัว</span>
+            <i class="fa-solid fa-download text-secondary"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 2 -->
+<div class="modal fade" id="modalForm2" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="fa-solid fa-folder-open text-warning me-2"></i>ผู้กู้รายใหม่</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <a href="#" class="file-list-item">
+            <span><i class="fa-regular fa-file-pdf me-2 text-danger"></i> แบบฟอร์มผู้กู้รายใหม่ (กยศ. 102)</span>
+            <i class="fa-solid fa-download text-secondary"></i>
+        </a>
+        <a href="#" class="file-list-item">
+            <span><i class="fa-regular fa-file-lines me-2 text-primary"></i> เช็คลิสต์เอกสารผู้กู้รายใหม่</span>
+            <i class="fa-solid fa-download text-secondary"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 3 -->
+<div class="modal fade" id="modalForm3" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="fa-solid fa-folder-open text-warning me-2"></i>ผู้กู้รายเก่า</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <a href="#" class="file-list-item">
+            <span><i class="fa-regular fa-file-pdf me-2 text-danger"></i> แบบฟอร์มผู้กู้รายเก่าเลื่อนชั้นปี (กยศ. 103)</span>
+            <i class="fa-solid fa-download text-secondary"></i>
+        </a>
+        <a href="#" class="file-list-item">
+            <span><i class="fa-regular fa-file-pdf me-2 text-danger"></i> แบบฟอร์มรายงานสถานภาพการศึกษา</span>
+            <i class="fa-solid fa-download text-secondary"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 4 -->
+<div class="modal fade" id="modalForm4" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="fa-solid fa-folder-open text-warning me-2"></i>หลักสูตรขอบเขตค่าเล่าเรียน</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <a href="#" class="file-list-item">
+            <span><i class="fa-regular fa-image me-2 text-success"></i> ตารางเพดานค่าเทอม (ล่าสุด)</span>
+            <i class="fa-solid fa-download text-secondary"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

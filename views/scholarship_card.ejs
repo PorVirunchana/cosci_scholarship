@@ -1,0 +1,41 @@
+<div class="col-md-6 col-lg-4 scholar-col">
+    <!-- การ์ดทุน -->
+    <div class="scholar-card d-flex flex-column <%= typeof accentClass !== 'undefined' ? accentClass : '' %>">
+        
+        <!-- ส่วนหัว: Badge และ ปี -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="badge rounded-pill fw-normal px-3 py-2 <%= badgeClass %>">
+                <%= badgeText %>
+            </span>
+            <span class="text-muted fw-bold small">
+                ปี <%= item.scholarship_year %>
+            </span>
+        </div>
+        
+        <!-- ชื่อทุน -->
+        <h5 class="fw-bold scholar-title text-dark mb-3" style="line-height: 1.5; min-height: 3.5rem;">
+            <%= item.scholarship_name %>
+        </h5>
+        
+        <!-- ระยะเวลา -->
+        <div class="mb-4">
+            <div class="text-secondary small mb-1">
+                ระยะเวลาเปิดรับสมัคร
+            </div>
+            <div class="fw-bold text-dark">
+                <%= item.apply_duration || 'ติดตามประกาศ' %>
+            </div>
+        </div>
+
+        <!-- ปุ่มกด (แก้กลับเป็นสีแดง btn-outline-danger ตามคำขอ) -->
+        <div class="mt-auto">
+            <button class="btn btn-outline-danger w-100 rounded-pill py-2 fw-bold" 
+                style="border-width: 2px;"
+                data-amount="<%= item.scholarship_amount ? item.scholarship_amount.toLocaleString() : 'ไม่ระบุ' %>"
+                onclick="showAmount(this)">
+                ดูรายละเอียด
+            </button>
+        </div>
+
+    </div>
+</div>

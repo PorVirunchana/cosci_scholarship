@@ -6,15 +6,17 @@ const session = require("express-session");
 const path = require("path");
 const nodemailer = require('nodemailer');
 const app = express();
-const moment = require('moment'); // สำหรับจัดการวันที่
-const requestIp = require('request-ip'); // สำหรับดึง IP Address
+const moment = require('moment'); 
+const requestIp = require('request-ip'); 
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
-app.use(express.static(path.join(__dirname, 'public'))); // กำหนดโฟลเดอร์สำหรับไฟล์ Static (CSS, JS, Images)
-app.use(requestIp.mw()); // Middleware สำหรับดึง IP
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(requestIp.mw()); 
 
+app.use(bodyParser.json()); 
 app.use(bodyParser.urlencoded({ extended: true }));
+
 app.use(express.static("public"));
 app.use(session({
   secret: "mySecretKey",
@@ -27,7 +29,7 @@ const db = mysql.createPool({
   host: "localhost",
   user: "root",
   password: "",
-  database: "web",
+  database: "swu_scholarship",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -36,13 +38,13 @@ const db = mysql.createPool({
 db.getConnection((err, connection) => {
   if (err) {
     console.error('MySQL connection error:', err);
-    throw err;
+    throw err; 
   }
-  console.log('✅ Connected to MySQL Database: web (pool)');
+  console.log('✅ Connected to MySQL Database: swu_scholarship (pool)');
   connection.release();
 });
 
-// sendmail
+// Sendmail function
 function sendmail(toemail, subject, html) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -57,215 +59,237 @@ function sendmail(toemail, subject, html) {
   });
 }
 
-// OTP store for forgot password
-let otpStore = {}; 
-let tempPasswordActive = {};
+// --- PAGE ROUTES ---
 
-// หน้าแรก
+app.get("/", (req, res) => {
+  res.redirect("/login");
+});
+
 app.get("/login", (req, res) => {
-  res.sendFile(path.join(__dirname, "views/login.html"));
+  res.render("login", { message: null });
 });
 
-// หน้า Register
 app.get("/register", (req, res) => {
-  res.sendFile(path.join(__dirname, "views/register.html"));
+  res.render("register"); 
 });
 
+// ✅ หน้า Dashboard (แก้ไขให้รวมประวัติ กยศ. ที่ผ่านแล้ว มาโชว์ด้วย)
 app.get("/dashboard", (req, res) => {
-  res.sendFile(path.join(__dirname, "views/dashboard.html"));
+    if (!req.session.user) return res.redirect("/login");
+    const email = req.session.user.email;
+
+    db.query("SELECT * FROM account WHERE email = ?", [email], (err, userResults) => {
+        if (err || userResults.length === 0) {
+            req.session.destroy();
+            return res.redirect("/login");
+        }
+        const user = userResults[0];
+
+        // Query 1: ทุนใหม่ 3 ประเภท
+        const sqlNew = `
+            (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในมหาลัย' LIMIT 1)
+            UNION
+            (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในวิทยาลัยนวัตกรรมสื่อสารสังคม' LIMIT 1)
+            UNION
+            (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนจากหน่วยงานภายนอก' LIMIT 1)
+        `;
+
+        db.query(sqlNew, (err, newScholarships) => {
+            // Query 2: ประวัติรวม (ทุนปกติ + กยศ. ที่ผ่านแล้ว)
+            // ใช้ UNION เพื่อรวมตาราง scholarship_detail และ slf_detail (เฉพาะที่ slf_pending = 1)
+            const sqlHistory = `
+                SELECT sd.scholarship_name, sd.scholarship_year, sd.scholarship_amount
+                FROM account ac
+                JOIN scholarship_awardees aw ON ac.student_id = aw.student_id
+                JOIN scholarship_detail sd ON aw.scholarship_id = sd.scholarship_id
+                WHERE ac.email = ?
+                
+                UNION
+                
+                SELECT 'กู้ยืมเพื่อการศึกษา (กยศ.)' AS scholarship_name, slf_year AS scholarship_year, slf_amount AS scholarship_amount
+                FROM slf_detail
+                WHERE student_id = ? AND slf_pending = 1
+
+                ORDER BY scholarship_year DESC
+            `;
+
+            db.query(sqlHistory, [email, user.student_id], (err, historyResults) => {
+                res.render("dashboard", { 
+                    user: user,
+                    newScholarships: newScholarships || [],
+                    history: historyResults || [] 
+                });
+            });
+        });
+    });
 });
 
 app.get("/scholarships", (req, res) => {
-  res.sendFile(path.join(__dirname, "views/scholarships.html"));
+    if (!req.session.user) return res.redirect("/login");
+    const sql = `
+        SELECT scholarship_id, scholarship_name, scholarship_year, scholarship_type, 
+               scholarship_amount, apply_duration, total_applicants, total_awardees 
+        FROM scholarship_detail ORDER BY scholarship_year DESC
+    `;
+    db.query(sql, (err, results) => {
+        if (err) return res.send("Database Error");
+        const targetYears = [2567, 2566, 2565];
+        const stats = targetYears.map(year => {
+            const scholarshipsInYear = results.filter(s => s.scholarship_year == year);
+            const sumApplicants = scholarshipsInYear.reduce((sum, item) => sum + (item.total_applicants || 0), 0);
+            const sumAwardees = scholarshipsInYear.reduce((sum, item) => sum + (item.total_awardees || 0), 0);
+            return { year, count: scholarshipsInYear.length, total_applicants: sumApplicants, total_awardees: sumAwardees };
+        });
+        res.render("scholarships", { scholarships: results, stats: stats, user: req.session.user });
+    });
+});
+
+// ✅ หน้า Student Loan (กยศ.)
+app.get("/student_loan", (req, res) => {
+    if (!req.session.user) return res.redirect("/login");
+    const user = req.session.user;
+
+    // 1. ดึงข้อมูลสถานะล่าสุดของนิสิตคนนี้
+    const sqlMyStatus = "SELECT * FROM slf_detail WHERE student_id = ? ORDER BY slf_year DESC LIMIT 1";
+
+    // 2. ดึงข้อมูลสถิติภาพรวม (นับจำนวน status 0, 1, 2 ในแต่ละปี)
+    const sqlStats = `
+        SELECT slf_year, slf_pending, COUNT(*) as count 
+        FROM slf_detail 
+        GROUP BY slf_year, slf_pending 
+        ORDER BY slf_year DESC
+    `;
+
+    db.query(sqlMyStatus, [user.student_id], (err, myStatusResult) => {
+        if(err) console.error(err);
+        const myLoan = myStatusResult.length > 0 ? myStatusResult[0] : null;
+
+        db.query(sqlStats, (err, statsResult) => {
+            if(err) console.error(err);
+            
+            // จัดรูปแบบข้อมูล Stats ให้ใช้ง่ายใน EJS
+            // Structure: { 2567: { pending: 10, pass: 5, fail: 2 }, 2566: ... }
+            let statsMap = {};
+            if(statsResult) {
+                statsResult.forEach(row => {
+                    if(!statsMap[row.slf_year]) statsMap[row.slf_year] = { pending: 0, pass: 0, fail: 0 };
+                    if(row.slf_pending == 0) statsMap[row.slf_year].pending = row.count;
+                    if(row.slf_pending == 1) statsMap[row.slf_year].pass = row.count;
+                    if(row.slf_pending == 2) statsMap[row.slf_year].fail = row.count;
+                });
+            }
+
+            res.render("student_loan", { 
+                user: user,
+                myLoan: myLoan, // ข้อมูลการกู้ของฉัน
+                stats: statsMap // ข้อมูลสถิติรวม
+            });
+        });
+    });
 });
 
 app.get("/profile", (req, res) => {
-  res.sendFile(path.join(__dirname, "views/profile.html"));
-});
-
-// Logout route
-app.get('/logout', (req, res) => {
-  if (req.session) {
-    req.session.destroy(err => {
-      // ignore err and redirect to login
-      res.redirect('/login');
+    if (!req.session.user) return res.redirect("/login");
+    const email = req.session.user.email;
+    db.query("SELECT * FROM account WHERE email = ?", [email], (err, results) => {
+        if (err || results.length === 0) {
+            req.session.destroy();
+            return res.redirect("/login");
+        }
+        res.render("profile", { user: results[0] });
     });
-  } else {
-    res.redirect('/login');
-  }
 });
 
-// Register
+app.get("/forgot", (req, res) => {
+    res.render("forgot_password"); 
+});
+
+app.get('/logout', (req, res) => {
+  req.session.destroy(() => res.redirect('/login'));
+});
+
+// --- API ROUTES ---
+
 app.post("/register", async (req, res) => {
-  const { email, username, password } = req.body;
-
-  db.query("SELECT * FROM accounts WHERE email=?", [email], async (err, results) => {
-    if(err) return res.send("Database error");
-    if(results.length > 0) return res.send("❌ Email นี้ถูกใช้แล้ว");
-
+  const { student_id, id_card, fullname, faculty, major, gpax, adviser_name, email, password, repassword } = req.body;
+  if (password !== repassword) return res.json({ success: false, message: "รหัสผ่านไม่ตรงกัน" });
+  db.query("SELECT * FROM account WHERE email = ? OR student_id = ?", [email, student_id], async (err, results) => {
+    if (results.length > 0) return res.json({ success: false, message: "อีเมล/รหัสนิสิต ถูกใช้แล้ว" });
     const hashedPassword = await bcrypt.hash(password, 10);
-    db.query("INSERT INTO accounts (email, username, password) VALUES (?, ?, ?)", [email, username, hashedPassword], err => {
-      if(err) return res.send("Database error");
-      res.send("✅ สมัครสมาชิกสำเร็จ! <a href='/login'>ไปล็อกอิน</a>");
+    const sql = `INSERT INTO account (student_id, id_card, fullname, email, password, faculty, major, gpax, adviser_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    db.query(sql, [student_id, id_card, fullname, email, hashedPassword, faculty, major, gpax, adviser_name], (err) => {
+      if (err) return res.json({ success: false, message: "DB Error" });
+      res.json({ success: true, message: "สมัครสำเร็จ" });
     });
   });
 });
 
-app.get("/login", (req, res) => {
-  res.sendFile(path.join(__dirname, "views/login.html"));
-});
-
-// Login
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
-
-  db.query("SELECT * FROM accounts WHERE email=?", [email], async (err, results) => {
-    if(err) {
-      console.error('Login DB error:', err);
-      return res.send("Database error (check server log)");
-    }
-    if(results.length === 0) {
-      return res.render("login", { message: "❌ Email ไม่พบในระบบ. ลงทะเบียนใหม่ <a href='/register'>คลิกที่นี่</a>" });
-    }
-
+  db.query("SELECT * FROM account WHERE email=?", [email], async (err, results) => {
+    if(err || results.length === 0) return res.render("login", { message: "❌ ไม่พบอีเมล" });
     const user = results[0];
     const match = await bcrypt.compare(password, user.password);
-    if(!match) return res.render("login", { message: "❌ รหัสผ่านไม่ถูกต้อง" });
-
+    if(!match) return res.render("login", { message: "❌ รหัสผ่านผิด" });
     req.session.user = user;
-    // If this account was assigned a temporary password, require change on next use
-    if (tempPasswordActive[user.email]) {
-      req.session.mustChangePassword = true;
-    } else {
-      req.session.mustChangePassword = false;
-    }
     res.redirect("/dashboard");
   });
 });
 
+// API เปลี่ยนรหัสผ่าน
+app.post("/api/change-password", async (req, res) => {
+    if (!req.session.user) return res.json({ success: false, message: "Unauthorized" });
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    const email = req.session.user.email;
+    if (newPassword !== confirmPassword) return res.json({ success: false, message: "รหัสผ่านใหม่ไม่ตรงกัน" });
+    db.query("SELECT * FROM account WHERE email = ?", [email], async (err, results) => {
+        if (err || results.length === 0) return res.json({ success: false, message: "User not found" });
+        const user = results[0];
+        const match = await bcrypt.compare(currentPassword, user.password);
+        if (!match) return res.json({ success: false, message: "รหัสผ่านเดิมไม่ถูกต้อง" });
+        const hashed = await bcrypt.hash(newPassword, 10);
+        db.query("UPDATE account SET password = ? WHERE email = ?", [hashed, email], (err) => {
+            if (err) return res.json({ success: false, message: "Database Error" });
+            res.json({ success: true, message: "เปลี่ยนรหัสผ่านสำเร็จ" });
+        });
+    });
+});
 
 // Forgot Password
-// หน้า Forgot
-app.get("/forgot", (req, res) => {
-  res.render("forgot_password", { step: 1, message: "" });
-});
-
-// ส่ง OTP + temporary password
-app.post("/forgot", (req, res) => {
-  const { email } = req.body;
-  db.query("SELECT * FROM accounts WHERE email=?", [email], async (err, results) => {
-    if(err) return res.send("Database error");
-    if(results.length === 0) return res.render("forgot_password", { step: 1, message: "❌ Email ไม่พบในระบบ" });
-
-    const otp = Math.floor(100000 + Math.random()*900000).toString();
-    const tempPassword = Math.random().toString(36).substring(2,10);
-    const hashedTemp = await bcrypt.hash(tempPassword, 10);
-
-    otpStore[email] = { code: otp, expires: Date.now() + 10*60*1000 };
-
-    db.query("UPDATE accounts SET password=? WHERE email=?", [hashedTemp, email], () => {
-      const html = `<h3>OTP: <strong>${otp}</strong></h3><p>Temporary password: <strong>${tempPassword}</strong></p>`;
-      sendmail(email, "Password Reset OTP", html);
-      // mark this account as having a temp password that must be changed on next login
-      tempPasswordActive[email] = true;
-      res.render("forgot_password", { step: 2, message: "ระบบส่ง OTP ไปที่อีเมลของคุณแล้ว", email });
+let otpCache = {}; 
+app.post("/api/forgot/send-otp", (req, res) => {
+    const { email } = req.body;
+    db.query("SELECT * FROM account WHERE email = ?", [email], (err, results) => {
+        if (err || results.length === 0) return res.json({ success: false, message: "ไม่พบอีเมล" });
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        otpCache[email] = { code: otp, expires: Date.now() + 5 * 60 * 1000 };
+        sendmail(email, "รหัส OTP", `<h3>OTP: ${otp}</h3>`);
+        res.json({ success: true, message: "ส่ง OTP แล้ว" });
     });
-  });
+});
+app.post("/api/forgot/verify-otp", (req, res) => {
+    const { email, otp } = req.body;
+    if (!otpCache[email] || Date.now() > otpCache[email].expires) return res.json({ success: false, message: "OTP หมดอายุ" });
+    if (otpCache[email].code !== otp) return res.json({ success: false, message: "OTP ไม่ถูกต้อง" });
+    res.json({ success: true, message: "OTP ถูกต้อง" });
+});
+app.post("/api/forgot/reset-password", async (req, res) => {
+    const { email, otp, newPassword } = req.body;
+    if (!otpCache[email] || otpCache[email].code !== otp) return res.json({ success: false, message: "Error" });
+    try {
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        db.query("UPDATE account SET password = ? WHERE email = ?", [hashedPassword, email], () => {
+            delete otpCache[email]; 
+            res.json({ success: true, message: "เปลี่ยนรหัสสำเร็จ" });
+        });
+    } catch (e) { res.json({ success: false, message: "Server Error" }); }
 });
 
-// Verify OTP
-app.post("/forgot/verify", (req, res) => {
-  const { email, otp } = req.body;
-  if(!otpStore[email] || Date.now() > otpStore[email].expires) {
-    return res.render("forgot_password", { step: 2, message: "❌ OTP หมดอายุ", email });
-  }
-  if(otpStore[email].code !== otp) {
-    return res.render("forgot_password", { step: 2, message: "❌ OTP ไม่ถูกต้อง", email });
-  }
-
-  delete otpStore[email];
-  res.send(`<script>alert('OTP ถูกต้อง! ใช้รหัสชั่วคราวล็อกอินได้เลย'); window.location.href='/login';</script>`);
-});
-
-// API ENDPOINTS
-// ตรวจว่าใครล็อกอินอยู่
 app.get('/api/session', (req, res) => {
   if (req.session && req.session.user) {
-    return res.json({ 
-      username: req.session.user.username, 
-      email: req.session.user.email, 
-      mustChangePassword: !!req.session.mustChangePassword 
-    });
+    return res.json({ username: req.session.user.fullname, email: req.session.user.email });
   }
   res.json({});
 });
 
-app.get('/debug/db', (req, res) => {
-  db.query('SELECT 1+1 AS sum', (err, results) => {
-    if (err) {
-      console.error('DB debug error:', err);
-      return res.status(500).json({ ok: false, error: err.message });
-    }
-    res.json({ ok: true, result: results[0] });
-  });
-});
-
-// ฟังก์ชัน Utility สำหรับ Query DB
-async function query(sql, params) {
-    const [rows] = await db.execute(sql, params);
-    return rows;
-}
-
-// 3. Route สำหรับหน้าแรก ('/')
-app.get('/', async (req, res) => {
-    const today = moment().format('YYYY-MM-DD');
-    const clientIp = req.clientIp;
-    let flagshipProducts = [];
-    let todayVisits = 0;
-    let totalVisits = 0;
-
-    // --- A. Logic: Counter นับผู้เข้าชม (1 IP ต่อ 1 วัน) ---
-    try {
-        // ตรวจสอบว่า IP นี้เคยเข้าชมวันนี้แล้วหรือยัง
-        const countQuery = 'SELECT * FROM counter WHERE ip_address = ? AND visit_date = ?';
-        const existingVisit = await query(countQuery, [clientIp, today]);
-
-        if (existingVisit.length === 0) {
-            // ถ้ายังไม่เคยเข้าชมวันนี้ ให้เพิ่มลงในตาราง counter
-            const insertQuery = 'INSERT INTO counter (ip_address, visit_date) VALUES (?, ?)';
-            await query(insertQuery, [clientIp, today]);
-        }
-        
-        // ดึงจำนวนผู้เข้าชมวันนี้ (Unique IP)
-        const totalToday = await query('SELECT COUNT(DISTINCT ip_address) as count FROM counter WHERE visit_date = ?', [today]);
-        todayVisits = totalToday[0].count;
-
-        // ดึงจำนวนผู้เข้าชมทั้งหมด
-        const totalAll = await query('SELECT COUNT(*) as total FROM counter');
-        totalVisits = totalAll[0].total;
-
-    } catch (error) {
-        console.error('Error handling counter:', error);
-        // หากมีข้อผิดพลาด ให้ออกค่าเป็น 0
-    }
-
-    // --- B. Logic: ดึงสินค้า Flagship จากฐานข้อมูล ---
-    try {
-        // is_flagship = 1 หมายถึงสินค้า Flagship
-        const productQuery = 'SELECT * FROM smartwatch_products WHERE is_flagship = 1 ORDER BY brand';
-        flagshipProducts = await query(productQuery);
-    } catch (error) {
-        console.error('Error fetching flagship products:', error);
-    }
-
-    // 4. แสดงผล Template (index.ejs)
-    res.render('index', { 
-        products: flagshipProducts,
-        todayVisits: todayVisits,
-        totalVisits: totalVisits,
-        user: req.session.user || null // Placeholder: สำหรับการแสดงชื่อสมาชิกเมื่อ Login แล้ว
-    });
-});
-
-// ---------------- Start Server -----------------
 app.listen(3000, () => console.log("🚀 Server running at http://localhost:3000"));

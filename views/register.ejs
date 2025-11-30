@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ลงทะเบียนสมาชิกใหม่ - ระบบทุนการศึกษา</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+
+    <style>
+        :root { --swu-red: #dd1f28; --swu-red-hover: #b41720; --bg-gray: #f0f2f5; --text-dark: #333333; }
+        body { background-color: var(--bg-gray); font-family: 'Prompt', sans-serif; color: var(--text-dark); padding-bottom: 20px; }
+        .logo { width: 300px; display: block; margin: 30px auto 10px; }
+        .title-text { text-align: center; font-size: 24px; font-weight: 400; margin-top: 5px; margin-bottom: 30px; color: var(--text-dark); }
+        .register-card { background: white; border-radius: 16px; width: 100%; max-width: 800px; margin: 0 auto 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); overflow: hidden; }
+        .form-container { padding: 40px; }
+        @media (min-width: 768px) { .form-container { padding: 50px; } }
+        .form-control { padding: 10px 15px; border-radius: 8px; border-color: #e0e0e0; font-size: 14px; }
+        .form-control:focus { border-color: var(--swu-red); box-shadow: 0 0 0 0.2rem rgba(221, 31, 40, 0.15); }
+        .form-label { font-weight: 600; font-size: 13px; color: #555; margin-bottom: 4px; }
+        .input-group-text { border-color: #e0e0e0; background-color: #f9f9f9; }
+        .btn-register { background-color: var(--swu-red); border: none; padding: 12px; font-weight: 600; transition: all 0.3s ease; border-radius: 8px; }
+        .btn-register:hover { background-color: var(--swu-red-hover); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(221, 31, 40, 0.3); }
+        .footer { text-align: center; margin-top: 20px; padding: 20px; color: #888; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <img src="/images/swu_logo.png" class="logo" alt="SWU Logo" 
+         onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Srinakharinwirot_University_Logo.png/600px-Srinakharinwirot_University_Logo.png'" />
+
+    <div class="title-text">ลงทะเบียนเข้าใช้งานระบบทุนการศึกษา</div>
+
+    <div class="register-card">
+        <div class="col-12">
+            <div class="form-container">
+                <h4 class="mb-4 fw-bold" style="color:var(--text-dark); border-left: 5px solid var(--swu-red); padding-left: 10px;">กรอกข้อมูลส่วนตัว</h4>
+
+                <form id="registerForm" onsubmit="handleRegister(event)">
+                    
+                    <h6 class="text-muted border-bottom pb-2 mb-3">ข้อมูลบัญชีผู้ใช้</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">รหัสนิสิต (Student ID) <span class="text-danger">*</span></label>
+                            <input type="text" id="student_id" class="form-control" placeholder="เช่น 6610xxxxx" required maxlength="11">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">เลขบัตรประชาชน (ID Card) <span class="text-danger">*</span></label>
+                            <input type="text" id="id_card" class="form-control" placeholder="13 หลัก" required maxlength="13">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">ชื่อ-นามสกุล (Full Name) <span class="text-danger">*</span></label>
+                        <input type="text" id="fullname" class="form-control" placeholder="นายรักเรียน ศรีนครินทร์" required>
+                    </div>
+
+                    <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">ข้อมูลการศึกษา</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">คณะ (Faculty) <span class="text-danger">*</span></label>
+                            <input type="text" id="faculty" class="form-control" placeholder="ระบุคณะ" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">สาขาวิชา (Major) <span class="text-danger">*</span></label>
+                            <input type="text" id="major" class="form-control" placeholder="ระบุสาขาวิชา" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">เกรดเฉลี่ยสะสม (GPAX) <span class="text-danger">*</span></label>
+                            <input type="number" id="gpax" class="form-control" placeholder="0.00" step="0.01" min="0" max="4.00" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">ชื่ออาจารย์ที่ปรึกษา (Adviser Name) <span class="text-danger">*</span></label>
+                            <input type="text" id="adviser_name" class="form-control" placeholder="ชื่ออาจารย์ที่ปรึกษา" required>
+                        </div>
+                    </div>
+
+                    <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">ตั้งค่ารหัสผ่าน</h6>
+                    <div class="mb-3">
+                        <label class="form-label">อีเมล (Email) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                            <input type="email" id="email" class="form-control" placeholder="name@example.com" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">รหัสผ่าน (Password) <span class="text-danger">*</span></label>
+                            <input type="password" id="password" class="form-control" placeholder="ตั้งรหัสผ่าน" required minlength="6">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">ยืนยันรหัสผ่าน (Re-Password) <span class="text-danger">*</span></label>
+                            <input type="password" id="repassword" class="form-control" placeholder="กรอกรหัสผ่านอีกครั้ง" required>
+                        </div>
+                    </div>
+
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" id="agree" required>
+                        <label class="form-check-label small text-muted" for="agree">
+                            ข้าพเจ้ายอมรับข้อตกลงและเงื่อนไขการใช้งาน
+                        </label>
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="btn btn-register w-100 text-white shadow-sm">ลงทะเบียน</button>
+
+                    <div class="text-center mt-4 pt-3 border-top">
+                        <span class="text-muted small">มีบัญชีผู้ใช้งานอยู่แล้ว?</span>
+                        <a href="/login" class="fw-bold text-decoration-underline ms-1" style="color: var(--swu-red);">เข้าสู่ระบบที่นี่</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Copyright © Srinakharinwirot University<br>
+        E-mail : contact@g.swu.ac.th
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    async function handleRegister(event) {
+        event.preventDefault(); // ป้องกันการ Submit แบบปกติ
+        
+        // ดึงค่าจากฟอร์ม
+        const student_id = document.getElementById('student_id').value;
+        const id_card = document.getElementById('id_card').value;
+        const fullname = document.getElementById('fullname').value;
+        const faculty = document.getElementById('faculty').value;
+        const major = document.getElementById('major').value;
+        const gpax = document.getElementById('gpax').value;
+        const adviser_name = document.getElementById('adviser_name').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const repassword = document.getElementById('repassword').value;
+
+        // ตรวจสอบ Password ตรงกันไหม
+        if (password !== repassword) {
+            alert('❌ รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง');
+            document.getElementById('repassword').value = ''; 
+            document.getElementById('repassword').focus();    
+            return; 
+        }
+        
+        // ปิดปุ่มระหว่างส่งข้อมูล
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'กำลังบันทึก...';
+
+        try {
+            // ส่งค่าไปที่ route: /register ใน app.js
+            const response = await fetch('/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    student_id, id_card, fullname, faculty, major, gpax, adviser_name, email, password, repassword
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert('✅ ลงทะเบียนสำเร็จ!');
+                window.location.href = '/login';
+            } else {
+                alert('❌ ลงทะเบียนไม่สำเร็จ: ' + result.message);
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'ลงทะเบียน';
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            alert('❌ เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'ลงทะเบียน';
+        }
+    }
+</script>
+</body>
+</html>
