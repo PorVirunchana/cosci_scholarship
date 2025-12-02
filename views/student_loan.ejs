@@ -251,23 +251,29 @@ body {
                         </div>
                     </div>
                     <!-- แถวใหม่ -->
-                            <div class="row g-4 text-center mt-3">
-                                <div class="col-md-6">
-                                    <div class="step-img-container" data-bs-toggle="modal" data-bs-target="#modalStep3">
-                                        <img src="/images/loanNew.png" class="img-fluid rounded" alt="ขั้นตอนเพิ่มเติม 1" onerror="this.src='https://via.placeholder.com/500x300?text=Image+Not+Found'">
-                                    </div>
-                                    <div class="step-caption"> คุณสมบัติของผู้กู้รายใหม่ </div>
+                        <div class="row g-4 text-center mt-3">
+                            <div class="col-md-6">
+                                <div class="step-img-container" data-bs-toggle="modal" data-bs-target="#modalStep3">
+                                    <img src="/images/loanNew.png" class="img-fluid rounded" alt="ขั้นตอนเพิ่มเติม 1" onerror="this.src='https://via.placeholder.com/500x300?text=Image+Not+Found'">
                                 </div>
-
-                                <div class="col-md-6">
-                                    <div class="step-img-container" data-bs-toggle="modal" data-bs-target="#modalStep4">
-                                        <img src="/images/extendAnnounce.png" class="img-fluid rounded" alt="ขั้นตอนเพิ่มเติม 2" onerror="this.src='https://via.placeholder.com/500x300?text=Image+Not+Found'">
-                                    </div>
-                                    <div class="step-caption">ประกาศขยายเวลาการยื่นคำขอกู้ยืม</div>
-                                </div>
+                                <div class="step-caption"> คุณสมบัติของผู้กู้รายใหม่ </div>
                             </div>
-                    </div>
+
+                            <div class="col-md-6">
+                                <div class="step-img-container" data-bs-toggle="modal" data-bs-target="#modalStep4">
+                                    <img src="/images/extendAnnounce.png" class="img-fluid rounded" alt="ขั้นตอนเพิ่มเติม 2" onerror="this.src='https://via.placeholder.com/500x300?text=Image+Not+Found'">
+                                </div>
+                                <div class="step-caption">ประกาศขยายเวลาการยื่นคำขอกู้ยืม</div>
+                            </div>
+                        </div>
+                            <div class="col-md-6 text-center">
+                                <div class="step-img-container" data-bs-toggle="modal" data-bs-target="#modalStepPDF">
+                                    <i class="fa-regular fa-file-pdf fa-5x text-danger"></i>
+                                </div>
+                                <div class="step-caption">ประกาศยื่นคำขอกู้ยืมเงินรายใหม่</div>
+                            </div>
                 </div>
+            </div>
 
             <!-- 3. ดาวน์โหลดแบบฟอร์ม -->
             <div class="card card-custom">
@@ -441,6 +447,17 @@ body {
       <div class="modal-body p-0 text-center position-relative">
         <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
         <img src="/images/extendAnnounce.png" class="img-fluid rounded shadow-lg" alt="ประกาศขยายเวลาการยื่นคำขอกู้ยืม" onerror="this.src='https://via.placeholder.com/800x600?text=Image+Not+Found'">
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalStepPDF" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body p-0 position-relative">
+        <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
+        <iframe src="/uploads/ประกาศยื่นคำขอกู้ยืมเงิน_รายใหม่.pdf" width="100%" height="800px"></iframe>
       </div>
     </div>
   </div>
