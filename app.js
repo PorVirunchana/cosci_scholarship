@@ -87,7 +87,7 @@ app.get("/dashboard", (req, res) => {
 
         // Query 1: ทุนใหม่ 3 ประเภท
         const sqlNew = `
-            (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในมหาลัย' LIMIT 1)
+            (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในมหาวิทยาลัย' LIMIT 1)
             UNION
             (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในวิทยาลัยนวัตกรรมสื่อสารสังคม' LIMIT 1)
             UNION
