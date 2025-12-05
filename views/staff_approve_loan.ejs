@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ตรวจสอบ กยศ. - Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+
+    <style>
+        :root { --swu-red: #dd1f28; --admin-bg: #f4f6f9; --text-dark: #333; }
+        body { background-color: var(--admin-bg); font-family: 'Prompt', sans-serif; color: var(--text-dark); padding-top: 80px; }
+
+        /* Navbar Staff */
+        .navbar { background-color: #2c3e50; box-shadow: 0 2px 10px rgba(0,0,0,0.1); height: 70px; }
+        .navbar-brand { color: white !important; font-weight: 600; }
+        .nav-link { color: rgba(255,255,255,0.8) !important; margin-right: 15px; }
+        .nav-link:hover, .nav-link.active { color: white !important; font-weight: 600; }
+
+        /* Content */
+        .card-table { background: white; border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.03); overflow: hidden; }
+        .table thead th { background-color: #f8f9fa; border-bottom: 2px solid #eee; font-weight: 600; color: #555; vertical-align: middle; }
+        
+        /* Tabs */
+        .nav-pills .nav-link { 
+            color: #555; border-radius: 50px; padding: 8px 25px; font-weight: 500; margin-right: 10px;
+            background-color: white; border: 1px solid #ddd;
+        }
+        .nav-pills .nav-link.active { background-color: var(--swu-red); color: white; border-color: var(--swu-red); }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/staff/dashboard">
+                <i class="fa-solid fa-user-shield me-2"></i> ระบบจัดการทุน (Admin)
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/staff"><i class="fa-solid fa-chart-line"></i> ภาพรวม</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/staffmanage"><i class="fa-solid fa-list-check"></i> จัดการทุน</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/staffapprove"><i class="fa-solid fa-hand-holding-dollar"></i> ตรวจสอบ กยศ.</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning" href="/logout"><i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <div class="mb-4">
+            <h3 class="fw-bold"><i class="fa-solid fa-clipboard-check me-2 text-secondary"></i>ตรวจสอบคำขอกู้ยืม กยศ.</h3>
+            <p class="text-muted">ปีการศึกษา 2567</p>
+        </div>
+
+        <!-- Tabs แยกสถานะ -->
+        <ul class="nav nav-pills mb-4" id="loanTabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending">
+                    <i class="fa-solid fa-hourglass-half me-2"></i>รอตรวจสอบ
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            
+            <!-- Tab 1: รอตรวจสอบ -->
+            <div class="tab-pane fade show active" id="pending">
+                <div class="card-table p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="ps-4">รหัสนิสิต</th>
+                                    <th>ชื่อ-นามสกุล</th>
+                                    <th>ประเภทผู้กู้</th>
+                                    <th>เอกสารแนบ</th>
+                                    <th class="text-center">ตรวจสอบ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Mock Data -->
+                                <tr>
+                                    <td class="ps-4">661010101</td>
+                                    <td>ตัวอย่าง</td>
+                                    <td><span class="badge bg-light text-dark border">ผู้กู้รายเก่า</span></td>
+                                    <td><a href="#" class="text-decoration-none"><i class="fa-solid fa-file-pdf text-danger me-1"></i> กยศ.101</a></td>
+                                    <td class="text-center">
+                                        <button class="btn btn-success btn-sm me-1" onclick="confirm('อนุมัติการกู้ยืม?')"><i class="fa-solid fa-check"></i> อนุมัติ</button>
+                                        <button class="btn btn-danger btn-sm" onclick="prompt('ระบุเหตุผลที่ไม่อนุมัติ:')"><i class="fa-solid fa-xmark"></i> ปฏิเสธ</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-4">661010102</td>
+                                    <td>ตัวอย่าง</td>
+                                    <td><span class="badge bg-light text-dark border">ผู้กู้รายใหม่</span></td>
+                                    <td><a href="#" class="text-decoration-none"><i class="fa-solid fa-file-pdf text-danger me-1"></i> กยศ.101</a></td>
+                                    <td class="text-center">
+                                        <button class="btn btn-success btn-sm me-1"><i class="fa-solid fa-check"></i> อนุมัติ</button>
+                                        <button class="btn btn-danger btn-sm"><i class="fa-solid fa-xmark"></i> ปฏิเสธ</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

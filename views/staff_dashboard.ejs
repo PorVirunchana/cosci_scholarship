@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard - ระบบจัดการทุน</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+
+    <style>
+        :root { --swu-red: #dd1f28; --admin-bg: #f4f6f9; --text-dark: #333; }
+        body { background-color: var(--admin-bg); font-family: 'Prompt', sans-serif; color: var(--text-dark); padding-top: 80px; }
+
+        /* Navbar สำหรับ Staff (ใช้สีเข้มเพื่อให้รู้ว่าเป็นหลังบ้าน) */
+        .navbar { background-color: #2c3e50; box-shadow: 0 2px 10px rgba(0,0,0,0.1); height: 70px; }
+        .navbar-brand { color: white !important; font-weight: 600; }
+        .nav-link { color: rgba(255,255,255,0.8) !important; margin-right: 15px; }
+        .nav-link:hover, .nav-link.active { color: white !important; font-weight: 600; }
+        .nav-link i { margin-right: 5px; }
+
+        /* Dashboard Cards */
+        .stat-card {
+            background: white; border-radius: 12px; padding: 20px; border: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02); height: 100%; transition: transform 0.2s;
+            position: relative; overflow: hidden;
+        }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-icon {
+            position: absolute; right: 20px; top: 20px; font-size: 3rem; opacity: 0.1;
+        }
+        .stat-value { font-size: 2.5rem; font-weight: 700; line-height: 1; margin-bottom: 5px; }
+        .stat-label { color: #666; font-size: 0.9rem; }
+
+        /* Table */
+        .card-table { background: white; border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.03); overflow: hidden; }
+        .table thead th { background-color: #f8f9fa; border-bottom: 2px solid #eee; font-weight: 600; color: #555; }
+        .btn-action { padding: 5px 10px; font-size: 0.85rem; border-radius: 6px; }
+
+        /* Quick Action Btn */
+        .btn-add-scholarship {
+            background-color: var(--swu-red); color: white; border: none; border-radius: 50px;
+            padding: 10px 25px; font-weight: 600; box-shadow: 0 4px 10px rgba(221, 31, 40, 0.3);
+            transition: all 0.2s;
+        }
+        .btn-add-scholarship:hover { background-color: #b0161d; transform: scale(1.05); color: white; }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar Staff -->
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/staff/dashboard">
+                <i class="fa-solid fa-user-shield me-2"></i> ระบบจัดการทุน (Admin)
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span> <!-- ใส่สีขาวใน CSS เพิ่มเติมถ้ามองไม่เห็น -->
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link active" href="/staff"><i class="fa-solid fa-chart-line"></i> ภาพรวม</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/staffmanage"><i class="fa-solid fa-list-check"></i> จัดการทุน</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/staffapprove"><i class="fa-solid fa-hand-holding-dollar"></i> ตรวจสอบ กยศ.</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning" href="/logout"><i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        
+        <!-- Header & Quick Action -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-0">สวัสดี, <%= user.staff_name %></h3>
+
+        <% if (user.staff_position) { %>
+            <p class="text-muted small">
+                <i class="fa-solid fa-id-badge me-1"></i>
+                <%= user.staff_position %>
+            </p>
+        <% } %>
+        
+    </div>
+</div>
+
+        <!-- 1. Summary Cards (ตัวเลขสำคัญ) -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="stat-card border-start border-4 border-warning">
+                    <div class="stat-value text-warning">0</div>
+                    <div class="stat-label">คำขอทุนรอตรวจสอบ</div>
+                    <i class="fa-solid fa-file-signature stat-icon text-warning"></i>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card border-start border-4 border-info">
+                    <div class="stat-value text-info">0</div>
+                    <div class="stat-label">เอกสาร กยศ. รอตรวจ</div>
+                    <i class="fa-solid fa-file-invoice-dollar stat-icon text-info"></i>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card border-start border-4 border-success">
+                    <div class="stat-value text-success">0</div>
+                    <div class="stat-label">ทุนที่กำลังเปิดรับสมัคร</div>
+                    <i class="fa-solid fa-bullhorn stat-icon text-success"></i>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card border-start border-4 border-secondary">
+                    <div class="stat-value text-secondary">0</div>
+                    <div class="stat-label">นิสิตได้รับทุนปีนี้ (คน)</div>
+                    <i class="fa-solid fa-users stat-icon text-secondary"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- 2. Recent Applications Table -->
+            <div class="col-lg-8 mb-4">
+                <div class="card-table p-4 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold m-0"><i class="fa-solid fa-clock-rotate-left me-2 text-warning"></i>คำขอทุนล่าสุด (รอตรวจสอบ)</h5>
+                        <a href="#" class="text-decoration-none small text-secondary">ดูทั้งหมด <i class="fa-solid fa-arrow-right"></i></a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>วันที่ยื่น</th>
+                                    <th>นิสิต</th>
+                                    <th>ชื่อทุน</th>
+                                    <th class="text-center">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data (รอดึงจริงในอนาคต) -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Active Scholarships -->
+            <div class="col-lg-4 mb-4">
+                <div class="card-table p-4 h-100">
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-toggle-on me-2 text-success"></i>ทุนที่กำลังเปิดรับ</h5>
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3 border-bottom">
+                            <div>
+                                <div class="fw-bold">ทุน . . .</div>
+                                <small class="text-muted"><i class="fa-regular fa-clock me-1"></i> เหลืออีก 0 วัน</small>
+                            </div>
+                            <span class="badge bg-primary rounded-pill">0 สมัคร</span>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-center">
+                        <a href="/staffmanage" class="btn btn-outline-secondary btn-sm w-100">จัดการทุนทั้งหมด</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -243,6 +243,51 @@ app.get('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/login'));
 });
 
+app.get("/staff", (req, res) => {
+  // ตรวจสอบว่าล็อกอินหรือไม่ และเป็น staff หรือไม่
+  if (!req.session.user || req.session.role !== 'staff') {
+      return res.redirect("/login");
+  }
+
+  // ส่งตัวแปร user ไปยังหน้าจอ
+  res.render("staff_dashboard", { 
+      user: req.session.user 
+  }); 
+});
+
+app.get("/staffmanage", (req, res) => {
+  // 1. ตรวจสอบสิทธิ์ (ต้องล็อกอินและเป็น staff)
+  if (!req.session.user || req.session.role !== 'staff') {
+      return res.redirect("/login");
+  }
+
+  // 2. SQL Query: ดึงข้อมูล 3 ประเภท ประเภทละ 1 ทุน ของปี 2567
+  const sql = `
+      (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในมหาวิทยาลัย' LIMIT 1)
+      UNION
+      (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในวิทยาลัยนวัตกรรมสื่อสารสังคม' LIMIT 1)
+      UNION
+      (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนจากหน่วยงานภายนอก' LIMIT 1)
+  `;
+
+  db.query(sql, (err, results) => {
+      if (err) {
+          console.error("Error fetching manage scholarships:", err);
+          return res.status(500).send("Database Error");
+      }
+
+      // 3. ส่งข้อมูลไปที่หน้าจอ (สำคัญมาก! บรรทัดนี้แก้ Error)
+      res.render("staff_manage_scholarships", { 
+          user: req.session.user,      
+          scholarships: results        // ✅ ต้องส่งตัวแปรนี้ไป ไม่งั้นหน้าเว็บจะหาไม่เจอ
+      }); 
+  });
+});
+
+app.get("/staffapprove", (req, res) => {
+  res.render("staff_approve_loan"); 
+});
+
 // --- API ROUTES ---
 
 app.post("/register", async (req, res) => {
@@ -259,15 +304,56 @@ app.post("/register", async (req, res) => {
   });
 });
 
+// ✅ LOGIN SYSTEM: รองรับทั้ง Student และ Staff
 app.post("/login", (req, res) => {
-  const { email, password } = req.body;
-  db.query("SELECT * FROM account WHERE email=?", [email], async (err, results) => {
-    if(err || results.length === 0) return res.render("login", { message: "❌ ไม่พบอีเมล" });
-    const user = results[0];
-    const match = await bcrypt.compare(password, user.password);
-    if(!match) return res.render("login", { message: "❌ รหัสผ่านผิด" });
-    req.session.user = user;
-    res.redirect("/dashboard");
+  const { email, password } = req.body; // รับค่าจากฟอร์ม (อาจเป็น Email หรือ Staff ID)
+
+  // 1. ตรวจสอบในตาราง account (นิสิต) ก่อน
+  db.query("SELECT * FROM account WHERE email=?", [email], async (err, studentResults) => {
+    if (err) {
+        console.error(err);
+        return res.render("login", { message: "Database Error" });
+    }
+
+    // --- กรณีเป็นนิสิต ---
+    if (studentResults.length > 0) {
+      const user = studentResults[0];
+      const match = await bcrypt.compare(password, user.password);
+      if (!match) return res.render("login", { message: "❌ รหัสผ่านไม่ถูกต้อง" });
+      
+      req.session.user = user;
+      req.session.role = 'student'; // กำหนด Role
+      return res.redirect("/dashboard");
+    }
+
+    // 2. ถ้าไม่เจอนิสิต -> ตรวจสอบในตาราง staff (เจ้าหน้าที่)
+    // ใช้ email ที่กรอกมาเทียบกับ staff_buasri
+    db.query("SELECT * FROM staff WHERE staff_buasri=?", [email], async (err, staffResults) => {
+        if (err) {
+            console.error(err);
+            return res.render("login", { message: "Database Error" });
+        }
+
+        // --- กรณีเป็น Staff ---
+        if (staffResults.length > 0) {
+            const staff = staffResults[0];
+            
+            // ตรวจสอบรหัสผ่าน (สมมติว่าเป็น Plain text ตามโค้ดเดิมของคุณ)
+            // ถ้าใน DB เก็บแบบ Hash ให้เปลี่ยนเป็น bcrypt.compare เหมือนของนิสิต
+            if (password !== staff.staff_pass) {
+                 return res.render("login", { message: "❌ รหัสผ่านเจ้าหน้าที่ไม่ถูกต้อง" });
+            }
+
+            // ✅ บันทึกข้อมูลลง Session
+            req.session.user = staff;
+            req.session.role = 'staff'; 
+            
+            return res.redirect("/staff"); 
+        }
+
+        // 3. ไม่เจอทั้งคู่
+        return res.render("login", { message: "❌ ไม่พบข้อมูลผู้ใช้งานในระบบ" });
+    });
   });
 });
 
@@ -318,6 +404,32 @@ app.post("/api/forgot/reset-password", async (req, res) => {
             res.json({ success: true, message: "เปลี่ยนรหัสสำเร็จ" });
         });
     } catch (e) { res.json({ success: false, message: "Server Error" }); }
+});
+
+// ตัวอย่าง Route สำหรับรับค่าจากฟอร์มเพิ่มทุน
+app.post("/add_scholarship", (req, res) => {
+    const {
+        scholarship_id,
+        scholarship_name, 
+        scholarship_year, 
+        scholarship_amount, 
+        scholarship_type, 
+        apply_duration
+    } = req.body;
+
+    const sql = `INSERT INTO scholarship_detail 
+                (scholarship_id, scholarship_name, scholarship_year, scholarship_amount, scholarship_type, apply_duration)
+                VALUES (?, ?, ?, ?, ?, ?)`;
+                
+    db.query(sql, [scholarship_id, scholarship_name, scholarship_year, scholarship_amount, scholarship_type, apply_duration], (err, result) => {
+        if (err) {
+            console.error("เกิดข้อผิดพลาดในการบันทึกข้อมูล:", err);
+            return res.status(500).send("Database Error: " + err.message);
+        }
+        // 4. บันทึกสำเร็จ ให้รีเฟรชกลับไปหน้า staffmanage
+        console.log("บันทึกข้อมูลทุนสำเร็จ!");
+        res.redirect("/staffmanage");
+    });
 });
 
 app.get('/api/session', (req, res) => {
