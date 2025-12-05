@@ -144,6 +144,41 @@ app.get("/scholarships", (req, res) => {
     });
 });
 
+//หน้า ผู้ได้รับทุนการศึกษา
+app.get("/awardees", (req, res) => {
+    // ตรวจสอบการเข้าสู่ระบบ
+    if (!req.session.user) return res.redirect("/login");
+
+    // SQL Query สำหรับดึงข้อมูลผู้ได้รับทุน
+    // fields: ชื่อ, รหัสนิสิต, major, ชื่อทุนการศึกษา และเพิ่ม scholarship_type
+    const sql = `
+        SELECT 
+            a.awardee_id,
+            a.scholarship_id,
+            s.scholarship_name,
+            s.scholarship_type,
+            s.scholarship_year,
+            a.awardee_name,
+            a.awardee_major
+        FROM scholarship_awardees a
+        JOIN scholarship_detail s ON a.scholarship_id = s.scholarship_id
+        ORDER BY a.awardee_id DESC 
+    `;
+
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error("Database error in /awardees:", err);
+            return res.status(500).send("Database Error");
+        }
+        // ส่งข้อมูลไปยังไฟล์ awardees.ejs
+        res.render("awardees", { 
+            awardees: results, 
+            user: req.session.user 
+        });
+    });
+});
+
+
 // ✅ หน้า Student Loan (กยศ.)
 app.get("/student_loan", (req, res) => {
     if (!req.session.user) return res.redirect("/login");
