@@ -6,8 +6,8 @@ const session = require("express-session");
 const path = require("path");
 const nodemailer = require('nodemailer');
 const app = express();
-const moment = require('moment'); 
 const requestIp = require('request-ip'); 
+const moment = require('moment'); // ✅ จำเป็นสำหรับ Counter
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
@@ -29,7 +29,7 @@ const db = mysql.createPool({
   host: "localhost",
   user: "root",
   password: "",
-  database: "swu_scholarship",
+  database: "swu_scholarship2",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -40,8 +40,60 @@ db.getConnection((err, connection) => {
     console.error('MySQL connection error:', err);
     throw err; 
   }
-  console.log('✅ Connected to MySQL Database: swu_scholarship (pool)');
+  console.log('✅ Connected to MySQL Database: swu_scholarship2 (pool)');
   connection.release();
+});
+
+// ==========================================
+// 🔥 Middleware: Counter (แก้ไขแล้ว) 🔥
+// ==========================================
+app.use(async (req, res, next) => {
+    // Helper function
+    const query = (sql, params) => {
+        return new Promise((resolve, reject) => {
+            db.query(sql, params, (err, result) => {
+                if (err) reject(err);
+                else resolve(result);
+            });
+        });
+    };
+
+    try {
+        const clientIp = requestIp.getClientIp(req);
+        const today = moment().format('YYYY-MM-DD');
+
+        console.log(`👀 มีผู้เข้าชม! IP: ${clientIp} | วันที่: ${today}`);
+
+        // 1. บันทึก (INSERT)
+        const insertRes = await query('INSERT IGNORE INTO counter (ip_address, visit_date) VALUES (?, ?)', [clientIp, today]);
+        
+        if (insertRes.affectedRows > 0) {
+            console.log("✅ บันทึก IP ใหม่สำเร็จ!");
+        } else {
+            console.log("⚠️ IP นี้เข้าชมแล้ว (ข้ามการบันทึก)");
+        }
+
+        // 2. ดึงยอดวันนี้ (บรรทัดนี้ที่น่าจะหายไปครับ)
+        const todayRes = await query('SELECT COUNT(*) as count FROM counter WHERE visit_date = ?', [today]);
+        
+        // 3. ดึงยอดทั้งหมด (และบรรทัดนี้)
+        const totalRes = await query('SELECT COUNT(*) as count FROM counter');
+
+        console.log(`📊 สถิติ -> วันนี้: ${todayRes[0].count} | รวม: ${totalRes[0].count}`);
+
+        // 4. ส่งค่าไปหน้าเว็บ
+        res.locals.visitorStats = {
+            today: todayRes[0].count,
+            total: totalRes[0].count
+        };
+
+    } catch (err) {
+        console.error("❌ Counter Error:", err);
+        // กรณี Error ให้ค่าเป็น 0
+        res.locals.visitorStats = { today: 0, total: 0 };
+    }
+    
+    next();
 });
 
 // Sendmail function
@@ -69,95 +121,82 @@ app.get("/login", (req, res) => {
   res.render("login", { message: null });
 });
 
+// ✅ GET REGISTER: ส่ง Major และ Staff ไปทำ Dropdown
 app.get("/register", (req, res) => {
-  res.render("register"); 
+    db.query("SELECT * FROM major", (err, majors) => {
+        if (err) { console.error(err); return res.send("Database Error (Major)"); }
+
+        db.query("SELECT * FROM staff", (err, staffs) => {
+            if (err) { console.error(err); return res.send("Database Error (Staff)"); }
+
+            res.render("register", { majors: majors, staffs: staffs }); 
+        });
+    });
 });
 
-// ✅ หน้า Dashboard (แก้ไขให้รวมประวัติ กยศ. ที่ผ่านแล้ว มาโชว์ด้วย)
+// ✅ DASHBOARD
 app.get("/dashboard", (req, res) => {
     if (!req.session.user) return res.redirect("/login");
-    // ดึงรหัสบัวศรีจาก session (student login)
     const buasri = req.session.user.stu_buasri;
     const stu_id = req.session.user.stu_id;
 
-    //ดึงข้อมูลผู้ใช้
-        db.query("SELECT * FROM account WHERE stu_buasri = ?", [buasri], (err, userResults) => {
+    // 1. Join Major เพื่อเอาชื่อสาขา (maj_th_name)
+    const sqlStudent = `
+        SELECT student.*, major.maj_th_name 
+        FROM student 
+        LEFT JOIN major ON student.stu_major = major.maj_id 
+        WHERE student.stu_buasri = ?
+    `;
+
+    db.query(sqlStudent, [buasri], (err, userResults) => {
         if (err || userResults.length === 0) {
             req.session.destroy();
             return res.redirect("/login");
         }
 
-        const user = userResults[0];
+        const student = userResults[0];
 
-        // 1) ดึงข้อมูลนิสิต + advisor
-        const queryStudent = `
-            SELECT stu_id, stu_name, stu_advisor
-            FROM student
-            WHERE stu_id = ?
-        `;
+        // 2. หาชื่ออาจารย์จาก staff table
+        const queryAdvisor = `SELECT staff_name FROM staff WHERE staff_id = ?`;
+        db.query(queryAdvisor, [student.stu_advisor], (err, staffResult) => {
+            const adviserName = (staffResult && staffResult.length > 0) ? staffResult[0].staff_name : "-";
 
-        db.query(queryStudent, [stu_id], (err, studentResult) => {
-        if (err) return res.status(500).send("Error fetching student data");
-        if (studentResult.length === 0) return res.status(404).send("Student not found");
-
-        const student = studentResult[0];
-        const advisorId = student.stu_advisor;
-
-        // 2) ดึงชื่ออาจารย์จากตาราง staff
-        const queryAdvisor = `
-            SELECT staff_name
-            FROM staff
-            WHERE staff_id = ?
-        `;
-
-        db.query(queryAdvisor, [advisorId], (err, staffResult) => {
-            if (err) return res.status(500).send("Error fetching advisor data");
-
-            const adviserName = staffResult.length > 0 ? staffResult[0].staff_name : "ไม่พบข้อมูลอาจารย์";
-
-            // 3) user object รวมข้อมูลทั้งหมด (เอา major จาก register)
             const user = {
                 stu_id: student.stu_id,
                 stu_name: student.stu_name,
-                stu_major: req.session.user.stu_major, 
+                stu_major: student.maj_th_name || '-', // ใช้ชื่อสาขาภาษาไทย
                 adviser_name: adviserName
             };
 
-        // 4) Query ทุนใหม่ 3 ประเภท
-        const sqlNew = `
-            (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในมหาวิทยาลัย' LIMIT 1)
-            UNION
-            (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในวิทยาลัยนวัตกรรมสื่อสารสังคม' LIMIT 1)
-            UNION
-            (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนจากหน่วยงานภายนอก' LIMIT 1)
-        `;
+            // 3. ทุนใหม่
+            const sqlNew = `
+                (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในมหาวิทยาลัย' LIMIT 1)
+                UNION
+                (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในวิทยาลัยนวัตกรรมสื่อสารสังคม' LIMIT 1)
+                UNION
+                (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนจากหน่วยงานภายนอก' LIMIT 1)
+            `;
 
-        db.query(sqlNew, (err, newScholarships) => {
-            // Query 2: ประวัติรวม (ทุนปกติ + กยศ. ที่ผ่านแล้ว)
-            // ใช้ UNION เพื่อรวมตาราง scholarship_detail และ slf_detail (เฉพาะที่ slf_pending = 1)
-            const sqlHistory = `
-            SELECT sd.scholarship_name, sd.scholarship_year, sd.scholarship_amount
-            FROM account ac
-            JOIN scholarship_awardees aw ON ac.stu_id = aw.stu_id
-            JOIN scholarship_detail sd ON aw.scholarship_id = sd.scholarship_id
-            WHERE ac.stu_id = ?
-            
-            UNION
-            
-            SELECT 'กู้ยืมเพื่อการศึกษา (กยศ.)' AS scholarship_name, slf_year AS scholarship_year, slf_amount AS scholarship_amount
-            FROM slf_detail
-            WHERE stu_id = ? AND slf_pending = 1
+            db.query(sqlNew, (err, newScholarships) => {
+                // 4. ประวัติทุน
+                const sqlHistory = `
+                    SELECT sd.scholarship_name, sd.scholarship_year, sd.scholarship_amount
+                    FROM student ac
+                    JOIN scholarship_awardees aw ON ac.stu_id = aw.stu_id
+                    JOIN scholarship_detail sd ON aw.scholarship_id = sd.scholarship_id
+                    WHERE ac.stu_id = ?
+                    UNION
+                    SELECT 'กู้ยืมเพื่อการศึกษา (กยศ.)' AS scholarship_name, slf_year AS scholarship_year, slf_amount AS scholarship_amount
+                    FROM slf_detail WHERE stu_id = ? AND slf_pending = 1
+                    ORDER BY scholarship_year DESC
+                `;
 
-            ORDER BY scholarship_year DESC
-        `;
-
-            db.query(sqlHistory, [stu_id, stu_id], (err, historyResults) => {
-                if (err) return res.status(500).send("Error fetching history");
-                res.render("dashboard", { 
-                    user: user,
-                    newScholarships: newScholarships || [],
-                    history: historyResults || [] 
-                    });
+                db.query(sqlHistory, [stu_id, stu_id], (err, historyResults) => {
+                    // ส่ง visitorStats ไปด้วย (จริงๆ มันอยู่ใน locals แล้ว แต่ส่งซ้ำก็ไม่เสียหาย)
+                    res.render("dashboard", { 
+                        user: user,
+                        newScholarships: newScholarships || [],
+                        history: historyResults || [] 
                     });
                 });
             });
@@ -167,88 +206,50 @@ app.get("/dashboard", (req, res) => {
 
 app.get("/scholarships", (req, res) => {
     if (!req.session.user) return res.redirect("/login");
-    const sql = `
-        SELECT scholarship_id, scholarship_name, scholarship_year, scholarship_type, 
-               scholarship_amount, apply_duration, total_applicants, total_awardees 
-        FROM scholarship_detail ORDER BY scholarship_year DESC
-    `;
+    const sql = `SELECT * FROM scholarship_detail ORDER BY scholarship_year DESC`;
     db.query(sql, (err, results) => {
         if (err) return res.send("Database Error");
+        
         const targetYears = [2567, 2566, 2565];
         const stats = targetYears.map(year => {
-            const scholarshipsInYear = results.filter(s => s.scholarship_year == year);
-            const sumApplicants = scholarshipsInYear.reduce((sum, item) => sum + (item.total_applicants || 0), 0);
-            const sumAwardees = scholarshipsInYear.reduce((sum, item) => sum + (item.total_awardees || 0), 0);
-            return { year, count: scholarshipsInYear.length, total_applicants: sumApplicants, total_awardees: sumAwardees };
+            const sInYear = results.filter(s => s.scholarship_year == year);
+            const sumApplicants = sInYear.reduce((sum, item) => sum + (item.total_applicants || 0), 0);
+            const sumAwardees = sInYear.reduce((sum, item) => sum + (item.total_awardees || 0), 0);
+            return { year, count: sInYear.length, total_applicants: sumApplicants, total_awardees: sumAwardees };
         });
+
         res.render("scholarships", { scholarships: results, stats: stats, user: req.session.user });
     });
 });
 
-//หน้า ผู้ได้รับทุนการศึกษา
 app.get("/awardees", (req, res) => {
     if (!req.session.user) return res.redirect("/login");
-
     const sql = `
-        SELECT 
-            a.awardee_id,
-            a.scholarship_id,
-            s.scholarship_name,
-            s.scholarship_type,
-            s.scholarship_year,
-            a.stu_name,
-            a.maj_id,
-            m.maj_th_name
+        SELECT a.awardee_id, a.scholarship_id, s.scholarship_name, s.scholarship_type, s.scholarship_year,
+               a.stu_name, a.maj_id, m.maj_th_name
         FROM scholarship_awardees a
         JOIN scholarship_detail s ON a.scholarship_id = s.scholarship_id
-        LEFT JOIN major m ON a.maj_id = m.maj_id -- join กับตาราง major
+        LEFT JOIN major m ON a.maj_id = m.maj_id
         ORDER BY a.awardee_id DESC
     `;
-
     db.query(sql, (err, results) => {
-        if (err) {
-            console.error("Database error in /awardees:", err);
-            return res.status(500).send("Database Error");
-        }
-
-        // ส่งชื่อสาขาไปใช้ใน EJS
+        if (err) return res.status(500).send("Database Error");
         res.render("awardees", { 
-            awardees: results.map(item => ({
-                ...item,
-                stu_major: item.maj_th_name || '-' // ใช้ชื่อสาขา หรือ '-' ถ้าไม่เจอ
-            })), 
+            awardees: results.map(item => ({ ...item, stu_major: item.maj_th_name || '-' })), 
             user: req.session.user 
         });
     });
 });
 
-
-
-// ✅ หน้า Student Loan (กยศ.)
 app.get("/student_loan", (req, res) => {
     if (!req.session.user) return res.redirect("/login");
     const user = req.session.user;
-
-    // 1. ดึงข้อมูลสถานะล่าสุดของนิสิตคนนี้
     const sqlMyStatus = "SELECT * FROM slf_detail WHERE stu_id = ? ORDER BY slf_year DESC LIMIT 1";
-
-    // 2. ดึงข้อมูลสถิติภาพรวม (นับจำนวน status 0, 1, 2 ในแต่ละปี)
-    const sqlStats = `
-        SELECT slf_year, slf_pending, COUNT(*) as count 
-        FROM slf_detail 
-        GROUP BY slf_year, slf_pending 
-        ORDER BY slf_year DESC
-    `;
+    const sqlStats = `SELECT slf_year, slf_pending, COUNT(*) as count FROM slf_detail GROUP BY slf_year, slf_pending ORDER BY slf_year DESC`;
 
     db.query(sqlMyStatus, [user.stu_id], (err, myStatusResult) => {
-        if(err) console.error(err);
         const myLoan = myStatusResult.length > 0 ? myStatusResult[0] : null;
-
         db.query(sqlStats, (err, statsResult) => {
-            if(err) console.error(err);
-            
-            // จัดรูปแบบข้อมูล Stats ให้ใช้ง่ายใน EJS
-            // Structure: { 2567: { pending: 10, pass: 5, fail: 2 }, 2566: ... }
             let statsMap = {};
             if(statsResult) {
                 statsResult.forEach(row => {
@@ -258,255 +259,151 @@ app.get("/student_loan", (req, res) => {
                     if(row.slf_pending == 2) statsMap[row.slf_year].fail = row.count;
                 });
             }
-
-            res.render("student_loan", { 
-                user: user,
-                myLoan: myLoan, // ข้อมูลการกู้ของฉัน
-                stats: statsMap // ข้อมูลสถิติรวม
-            });
+            res.render("student_loan", { user: user, myLoan: myLoan, stats: statsMap });
         });
     });
 });
 
+// ✅ PROFILE
 app.get("/profile", (req, res) => {
     if (!req.session.user) return res.redirect("/login");
-
     const buasri = req.session.user.stu_buasri;
 
-    // ดึงข้อมูลจาก account
-    db.query("SELECT * FROM account WHERE stu_buasri = ?", [buasri], (err, accountResults) => {
-        if (err || accountResults.length === 0) {
-            req.session.destroy();
-            return res.redirect("/login");
-        }
+    // Join Major
+    const sqlStudent = `
+        SELECT student.*, major.maj_th_name 
+        FROM student 
+        LEFT JOIN major ON student.stu_major = major.maj_id 
+        WHERE student.stu_buasri = ?
+    `;
 
-        const account = accountResults[0];
-
-        // ดึงข้อมูล stu_advisor จากตาราง student
-        db.query("SELECT stu_advisor FROM student WHERE stu_id = ?", [account.stu_id], (err, studentResults) => {
-            if (err) return res.status(500).send("Error fetching student data");
-
-            const advisorId = studentResults.length > 0 ? studentResults[0].stu_advisor : null;
-
-            // ดึงชื่ออาจารย์จาก staff
-            db.query("SELECT staff_name FROM staff WHERE staff_id = ?", [advisorId], (err, staffResults) => {
-                if (err) return res.status(500).send("Error fetching advisor data");
-
-                const adviserName = staffResults.length > 0 ? staffResults[0].staff_name : "-";
-
-                // รวมข้อมูลทั้งหมดลงใน user object
-                const user = {
-                    stu_id: account.stu_id,
-                    stu_name: account.stu_name,
-                    stu_email: account.stu_email,
-                    faculty: account.faculty,
-                    stu_major: account.stu_major,
-                    adviser_name: adviserName,
-                };
-
-                res.render("profile", { user });
-            });
+    db.query(sqlStudent, [buasri], (err, r) => {
+        if (err || r.length === 0) { req.session.destroy(); return res.redirect("/login"); }
+        const s = r[0];
+        
+        // Join Staff
+        db.query("SELECT staff_name FROM staff WHERE staff_id = ?", [s.stu_advisor], (err, st) => {
+            const adviserName = (st && st.length > 0) ? st[0].staff_name : "-";
+            const user = {
+                stu_id: s.stu_id,
+                stu_name: s.stu_name,
+                stu_email: s.stu_email,
+                stu_major: s.maj_th_name || '-',
+                adviser_name: adviserName,
+            };
+            res.render("profile", { user });
         });
     });
 });
 
+app.get("/forgot", (req, res) => { res.render("forgot_password"); });
+app.get('/logout', (req, res) => { req.session.destroy(() => res.redirect('/login')); });
 
-app.get("/forgot", (req, res) => {
-    res.render("forgot_password"); 
-});
-
-app.get('/logout', (req, res) => {
-  req.session.destroy(() => res.redirect('/login'));
-});
-
+// STAFF ROUTES
 app.get("/staff", (req, res) => {
-  // ตรวจสอบว่าล็อกอินหรือไม่ และเป็น staff หรือไม่
-  if (!req.session.user || req.session.role !== 'staff') {
-      return res.redirect("/login");
-  }
-
-  // ส่งตัวแปร user ไปยังหน้าจอ
-  res.render("staff_dashboard", { 
-      user: req.session.user 
-  }); 
+  if (!req.session.user || req.session.role !== 'staff') return res.redirect("/login");
+  res.render("staff_dashboard", { user: req.session.user }); 
 });
 
 app.get("/staffmanage", (req, res) => {
-  // 1. ตรวจสอบสิทธิ์ (ต้องล็อกอินและเป็น staff)
-  if (!req.session.user || req.session.role !== 'staff') {
-      return res.redirect("/login");
-  }
-
-  // 2. SQL Query: ดึงข้อมูล 3 ประเภท ประเภทละ 1 ทุน ของปี 2567
-  const sql = `
-      (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในมหาวิทยาลัย' LIMIT 1)
-      UNION
-      (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในวิทยาลัยนวัตกรรมสื่อสารสังคม' LIMIT 1)
-      UNION
-      (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนจากหน่วยงานภายนอก' LIMIT 1)
-  `;
-
-  db.query(sql, (err, results) => {
-      if (err) {
-          console.error("Error fetching manage scholarships:", err);
-          return res.status(500).send("Database Error");
-      }
-
-      // 3. ส่งข้อมูลไปที่หน้าจอ (สำคัญมาก! บรรทัดนี้แก้ Error)
-      res.render("staff_manage_scholarships", { 
-          user: req.session.user,      
-          scholarships: results        // ✅ ต้องส่งตัวแปรนี้ไป ไม่งั้นหน้าเว็บจะหาไม่เจอ
-      }); 
-  });
+    if (!req.session.user || req.session.role !== 'staff') return res.redirect("/login");
+    const sql = `
+        (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในมหาวิทยาลัย' LIMIT 1)
+        UNION
+        (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในวิทยาลัยนวัตกรรมสื่อสารสังคม' LIMIT 1)
+        UNION
+        (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนจากหน่วยงานภายนอก' LIMIT 1)
+    `;
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).send("DB Error");
+        res.render("staff_manage_scholarships", { user: req.session.user, scholarships: results }); 
+    });
 });
 
-app.get("/staffapprove", (req, res) => {
-  res.render("staff_approve_loan"); 
-});
+app.get("/staffapprove", (req, res) => { res.render("staff_approve_loan"); });
 
 // --- API ROUTES ---
 
+// ✅ REGISTER
 app.post("/register", (req, res) => {
-    const { stu_id, stu_buasri, stu_name, stu_eng_name, stu_email, stu_group, stu_major, stu_pass } = req.body;
-
-    // 1) เช็ค stu_buasri ว่ามีใน student ไหม
-    db.query(
-        "SELECT * FROM student WHERE stu_buasri = ?",
-        [stu_buasri],
-        (err, checkBuasri) => {
-        if (err) return res.json({ success: false, message: "DB Error 1" });
-
-        if (checkBuasri.length === 0) {
-            return res.json({
-            success: false,
-            message: "ไม่พบรหัสบัวศรีนี้ในระบบนิสิต"
-            });
-        }
-
-        // 2) เช็ค duplicate ใน account
-        db.query(
-            "SELECT * FROM account WHERE stu_email = ? OR stu_id = ? OR stu_buasri = ?",
-            [stu_email, stu_id, stu_buasri],
-            (err, checkAccount) => {
-            if (err) return res.json({ success: false, message: "DB Error 2" });
-
-            if (checkAccount.length > 0) {
-                return res.json({
-                success: false,
-                message: "อีเมล/รหัสนิสิต/รหัสบัวศรีนี้ ถูกใช้แล้ว"
-                });
-            }
-
-            // 3) hash password → bcrypt ต้องใช้ callback เช่นกัน
-            bcrypt.hash(stu_pass, 10, (err, hashedPassword) => {
-                if (err) return res.json({ success: false, message: "Hash Error" });
-
-                // 4) insert account
-                db.query(
-                `INSERT INTO account 
-                    (stu_id, stu_buasri, stu_name, stu_eng_name, stu_email, stu_group, stu_major, stu_pass)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                [stu_id, stu_buasri, stu_name, stu_eng_name, stu_email, stu_group, stu_major, hashedPassword],
-                (err, result) => {
-                    if (err) {
-                    console.error(err);
-                    return res.json({
-                        success: false,
-                        message: "เกิดข้อผิดพลาดในระบบ"
-                    });
-                    }
-
-                    return res.json({
-                    success: true,
-                    message: "สมัครสำเร็จ"
-                    });
-                }
-                );
-            });
-            }
-        );
-        }
-    );
-    });
-
-
-// ✅ LOGIN SYSTEM: รองรับทั้ง Student และ Staff
-app.post("/login", (req, res) => {
-    const { buasri, password } = req.body;
-
-  // 1. ตรวจสอบในตาราง account (นิสิต) ก่อน
-  db.query("SELECT * FROM account WHERE stu_buasri=?", [buasri], async (err, studentResults) => {
-    if (err) {
-        console.error(err);
-        return res.render("login", { message: "Database Error" });
-    }
-
-    // --- กรณีเป็นนิสิต ---
-    if (studentResults.length > 0) {
-        const user = studentResults[0];
-        const match = await bcrypt.compare(password, user.stu_pass);
-        if (!match) return res.render("login", { message: "❌ รหัสผ่านไม่ถูกต้อง" });
+    const { stu_id, stu_buasri, stu_name, stu_eng_name, stu_email, stu_group, stu_major, stu_pass, stu_advisor } = req.body;
     
-        req.session.user = user;
-        req.session.role = 'student'; // กำหนด Role
-        return res.redirect("/dashboard");
-    }
-
-    // 2. ถ้าไม่เจอนิสิต -> ตรวจสอบในตาราง staff (เจ้าหน้าที่)
-    // ใช้ email ที่กรอกมาเทียบกับ staff_buasri
-    db.query("SELECT * FROM staff WHERE staff_buasri=?", [buasri], async (err, staffResults) => {
-        if (err) {
-            console.error(err);
-            return res.render("login", { message: "Database Error" });
-        }
-
-        // --- กรณีเป็น Staff ---
-        if (staffResults.length > 0) {
-            const staff = staffResults[0];
-            
-            // ตรวจสอบรหัสผ่าน (สมมติว่าเป็น Plain text ตามโค้ดเดิมของคุณ)
-            // ถ้าใน DB เก็บแบบ Hash ให้เปลี่ยนเป็น bcrypt.compare เหมือนของนิสิต
-            if (password !== staff.staff_pass) {
-                 return res.render("login", { message: "❌ รหัสผ่านเจ้าหน้าที่ไม่ถูกต้อง" });
-            }
-
-            // ✅ บันทึกข้อมูลลง Session
-            req.session.user = staff;
-            req.session.role = 'staff'; 
-            
-            return res.redirect("/staff"); 
-        }
-
-        // 3. ไม่เจอทั้งคู่
-        return res.render("login", { message: "❌ ไม่พบข้อมูลผู้ใช้งานในระบบ" });
+    // Check Duplicate
+    db.query("SELECT * FROM student WHERE stu_buasri = ? OR stu_id = ? OR stu_email = ?", [stu_buasri, stu_id, stu_email], (err, check) => {
+        if (err) return res.json({ success: false, message: "DB Error" });
+        if (check.length > 0) return res.json({ success: false, message: "ข้อมูลซ้ำ (รหัสนิสิต/บัวศรี/อีเมล)" });
+        
+        // Hash & Insert
+        bcrypt.hash(stu_pass, 10, (err, hash) => {
+            if (err) return res.json({ success: false, message: "Hash Error" });
+            const sql = `INSERT INTO student (stu_id, stu_buasri, stu_name, stu_eng_name, stu_email, stu_group, stu_major, stu_advisor, stu_pass) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            db.query(sql, [stu_id, stu_buasri, stu_name, stu_eng_name, stu_email, stu_group, stu_major, stu_advisor, hash], (err, result) => {
+                if (err) { console.error(err); return res.json({ success: false, message: "Insert Error" }); }
+                res.json({ success: true, message: "สมัครสำเร็จ" });
+            });
+        });
     });
-  });
 });
 
-// API เปลี่ยนรหัสผ่าน
+// ✅ LOGIN (Bcrypt for both)
+app.post("/login", (req, res) => {
+    const { buasri, password } = req.body;
+    
+    // Check Student
+    db.query("SELECT * FROM student WHERE stu_buasri=?", [buasri], async (err, result) => {
+        if (err) return res.render("login", { message: "DB Error" });
+        
+        if (result.length > 0) {
+            const user = result[0];
+            const match = await bcrypt.compare(password, user.stu_pass);
+            if (!match) return res.render("login", { message: "❌ รหัสผ่านไม่ถูกต้อง" });
+            req.session.user = user;
+            req.session.role = 'student';
+            return res.redirect("/dashboard");
+        }
+        
+        // Check Staff
+        db.query("SELECT * FROM staff WHERE staff_buasri=?", [buasri], async (err, sResult) => {
+            if (sResult.length > 0) {
+                const staff = sResult[0];
+                const match = await bcrypt.compare(password, staff.staff_pass);
+                if (!match) return res.render("login", { message: "❌ รหัสผ่าน จนท. ผิด" });
+                req.session.user = staff;
+                req.session.role = 'staff';
+                return res.redirect("/staff");
+            }
+            return res.render("login", { message: "❌ ไม่พบผู้ใช้งาน" });
+        });
+    });
+});
+
+// CHANGE PASSWORD
 app.post("/api/change-password", async (req, res) => {
     if (!req.session.user) return res.json({ success: false, message: "Unauthorized" });
     const { currentPassword, newPassword, confirmPassword } = req.body;
-    const email = req.session.user.email;
+    const email = req.session.user.stu_email;
+
     if (newPassword !== confirmPassword) return res.json({ success: false, message: "รหัสผ่านใหม่ไม่ตรงกัน" });
-    db.query("SELECT * FROM account WHERE email = ?", [email], async (err, results) => {
+
+    db.query("SELECT * FROM student WHERE stu_email = ?", [email], async (err, results) => {
         if (err || results.length === 0) return res.json({ success: false, message: "User not found" });
         const user = results[0];
-        const match = await bcrypt.compare(currentPassword, user.password);
+        const match = await bcrypt.compare(currentPassword, user.stu_pass);
         if (!match) return res.json({ success: false, message: "รหัสผ่านเดิมไม่ถูกต้อง" });
+        
         const hashed = await bcrypt.hash(newPassword, 10);
-        db.query("UPDATE account SET password = ? WHERE email = ?", [hashed, email], (err) => {
-            if (err) return res.json({ success: false, message: "Database Error" });
+        db.query("UPDATE student SET stu_pass = ? WHERE stu_email = ?", [hashed, email], (err) => {
+            if (err) return res.json({ success: false, message: "DB Error" });
             res.json({ success: true, message: "เปลี่ยนรหัสผ่านสำเร็จ" });
         });
     });
 });
 
-// Forgot Password
+// FORGOT PASSWORD
 let otpCache = {}; 
 app.post("/api/forgot/send-otp", (req, res) => {
     const { email } = req.body;
-    db.query("SELECT * FROM account WHERE email = ?", [email], (err, results) => {
+    db.query("SELECT * FROM student WHERE stu_email = ?", [email], (err, results) => {
         if (err || results.length === 0) return res.json({ success: false, message: "ไม่พบอีเมล" });
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         otpCache[email] = { code: otp, expires: Date.now() + 5 * 60 * 1000 };
@@ -514,53 +411,39 @@ app.post("/api/forgot/send-otp", (req, res) => {
         res.json({ success: true, message: "ส่ง OTP แล้ว" });
     });
 });
+
 app.post("/api/forgot/verify-otp", (req, res) => {
     const { email, otp } = req.body;
     if (!otpCache[email] || Date.now() > otpCache[email].expires) return res.json({ success: false, message: "OTP หมดอายุ" });
     if (otpCache[email].code !== otp) return res.json({ success: false, message: "OTP ไม่ถูกต้อง" });
     res.json({ success: true, message: "OTP ถูกต้อง" });
 });
+
 app.post("/api/forgot/reset-password", async (req, res) => {
     const { email, otp, newPassword } = req.body;
     if (!otpCache[email] || otpCache[email].code !== otp) return res.json({ success: false, message: "Error" });
     try {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        db.query("UPDATE account SET password = ? WHERE email = ?", [hashedPassword, email], () => {
+        db.query("UPDATE student SET stu_pass = ? WHERE stu_email = ?", [hashedPassword, email], () => {
             delete otpCache[email]; 
             res.json({ success: true, message: "เปลี่ยนรหัสสำเร็จ" });
         });
     } catch (e) { res.json({ success: false, message: "Server Error" }); }
 });
 
-// ตัวอย่าง Route สำหรับรับค่าจากฟอร์มเพิ่มทุน
+// ADD SCHOLARSHIP (Staff)
 app.post("/add_scholarship", (req, res) => {
-    const {
-        scholarship_id,
-        scholarship_name, 
-        scholarship_year, 
-        scholarship_amount, 
-        scholarship_type, 
-        apply_duration
-    } = req.body;
-
-    const sql = `INSERT INTO scholarship_detail 
-                (scholarship_id, scholarship_name, scholarship_year, scholarship_amount, scholarship_type, apply_duration)
-                VALUES (?, ?, ?, ?, ?, ?)`;
-                
+    const { scholarship_id, scholarship_name, scholarship_year, scholarship_amount, scholarship_type, apply_duration } = req.body;
+    const sql = `INSERT INTO scholarship_detail (scholarship_id, scholarship_name, scholarship_year, scholarship_amount, scholarship_type, apply_duration) VALUES (?, ?, ?, ?, ?, ?)`;   
     db.query(sql, [scholarship_id, scholarship_name, scholarship_year, scholarship_amount, scholarship_type, apply_duration], (err, result) => {
-        if (err) {
-            console.error("เกิดข้อผิดพลาดในการบันทึกข้อมูล:", err);
-            return res.status(500).send("Database Error: " + err.message);
-        }
-        // 4. บันทึกสำเร็จ ให้รีเฟรชกลับไปหน้า staffmanage
-        console.log("บันทึกข้อมูลทุนสำเร็จ!");
+        if (err) { console.error("Add Error:", err); return res.status(500).send("DB Error"); }
         res.redirect("/staffmanage");
     });
 });
 
 app.get('/api/session', (req, res) => {
   if (req.session && req.session.user) {
-    return res.json({ username: req.session.user.fullname, email: req.session.user.email });
+    return res.json({ username: req.session.user.stu_name || req.session.user.staff_name });
   }
   res.json({});
 });
