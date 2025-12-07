@@ -45,39 +45,33 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">รหัสนิสิต (Student ID) <span class="text-danger">*</span></label>
-                            <input type="text" id="student_id" class="form-control" placeholder="เช่น 6610xxxxx" required maxlength="11">
+                            <input type="text" id="stu_id" class="form-control" placeholder="เช่น 6610xxxxx" required maxlength="11">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">เลขบัตรประชาชน (ID Card) <span class="text-danger">*</span></label>
-                            <input type="text" id="id_card" class="form-control" placeholder="13 หลัก" required maxlength="13">
+                            <label class="form-label">รหัสบัวศรี (Buasri ID) <span class="text-danger">*</span></label>
+                            <input type="text" id="stu_buasri" class="form-control" placeholder="กรุณากรอกรหัสบัวศรี" required maxlength="11">
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">ชื่อ-นามสกุล (Full Name) <span class="text-danger">*</span></label>
-                        <input type="text" id="fullname" class="form-control" placeholder="นายรักเรียน ศรีนครินทร์" required>
+                        <label class="form-label">ชื่อ-นามสกุล (TH) <span class="text-danger">*</span></label>
+                        <input type="text" id="stu_name" class="form-control" placeholder="นายรักเรียน ศรีนครินทร์" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">ชื่อ-นามสกุล (EN) <span class="text-danger">*</span></label>
+                        <input type="text" id="stu_eng_name" class="form-control" placeholder="Rukrean Srinakarin" required>
                     </div>
 
                     <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">ข้อมูลการศึกษา</h6>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">คณะ (Faculty) <span class="text-danger">*</span></label>
-                            <input type="text" id="faculty" class="form-control" placeholder="ระบุคณะ" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
                             <label class="form-label">สาขาวิชา (Major) <span class="text-danger">*</span></label>
-                            <input type="text" id="major" class="form-control" placeholder="ระบุสาขาวิชา" required>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">เกรดเฉลี่ยสะสม (GPAX) <span class="text-danger">*</span></label>
-                            <input type="number" id="gpax" class="form-control" placeholder="0.00" step="0.01" min="0" max="4.00" required>
+                            <input type="text" id="stu_major" class="form-control" placeholder="ระบุสาขาวิชา" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">ชื่ออาจารย์ที่ปรึกษา (Adviser Name) <span class="text-danger">*</span></label>
-                            <input type="text" id="adviser_name" class="form-control" placeholder="ชื่ออาจารย์ที่ปรึกษา" required>
+                            <label class="form-label">หมู่เรียน (Group)<span class="text-danger">*</span></label>
+                            <input type="text" id="stu_group" class="form-control" placeholder="ระบุหมู่เรียน ICxxx" required>
                         </div>
                     </div>
 
@@ -86,18 +80,18 @@
                         <label class="form-label">อีเมล (Email) <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
-                            <input type="email" id="email" class="form-control" placeholder="name@example.com" required>
+                            <input type="email" id="stu_email" class="form-control" placeholder="name@g.swu.sc.th" required>
                         </div>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">รหัสผ่าน (Password) <span class="text-danger">*</span></label>
-                            <input type="password" id="password" class="form-control" placeholder="ตั้งรหัสผ่าน" required minlength="6">
+                            <input type="password" id="stu_pass" class="form-control" placeholder="ตั้งรหัสผ่าน" required minlength="6">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">ยืนยันรหัสผ่าน (Re-Password) <span class="text-danger">*</span></label>
-                            <input type="password" id="repassword" class="form-control" placeholder="กรอกรหัสผ่านอีกครั้ง" required>
+                            <input type="password" id="stu_repass" class="form-control" placeholder="กรอกรหัสผ่านอีกครั้ง" required>
                         </div>
                     </div>
 
@@ -131,22 +125,21 @@
         event.preventDefault(); // ป้องกันการ Submit แบบปกติ
         
         // ดึงค่าจากฟอร์ม
-        const student_id = document.getElementById('student_id').value;
-        const id_card = document.getElementById('id_card').value;
-        const fullname = document.getElementById('fullname').value;
-        const faculty = document.getElementById('faculty').value;
-        const major = document.getElementById('major').value;
-        const gpax = document.getElementById('gpax').value;
-        const adviser_name = document.getElementById('adviser_name').value;
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const repassword = document.getElementById('repassword').value;
+        const stu_id = document.getElementById('stu_id').value;
+        const stu_buasri = document.getElementById('stu_buasri').value;
+        const stu_name = document.getElementById('stu_name').value;
+        const stu_eng_name = document.getElementById('stu_eng_name').value;
+        const stu_major = document.getElementById('stu_major').value;
+        const stu_group = document.getElementById('stu_group').value;
+        const stu_email = document.getElementById('stu_email').value;
+        const stu_pass = document.getElementById('stu_pass').value;
+        const stu_repass = document.getElementById('stu_repass').value;
 
         // ตรวจสอบ Password ตรงกันไหม
-        if (password !== repassword) {
+        if (stu_pass !== stu_repass) {
             alert('❌ รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง');
-            document.getElementById('repassword').value = ''; 
-            document.getElementById('repassword').focus();    
+            document.getElementById('stu_repass').value = ''; 
+            document.getElementById('stu_repass').focus();    
             return; 
         }
         
@@ -161,8 +154,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    student_id, id_card, fullname, faculty, major, gpax, adviser_name, email, password, repassword
-                })
+                    stu_id,stu_buasri, stu_name, stu_eng_name,stu_email,stu_group,stu_major,stu_pass})
             });
 
             const result = await response.json();

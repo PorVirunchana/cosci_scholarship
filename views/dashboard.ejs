@@ -56,8 +56,8 @@
                 <div class="dropdown">
                     <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark" id="userDrop" data-bs-toggle="dropdown">
                         <div class="text-end me-2 lh-1 d-none d-sm-block">
-                            <div class="fw-bold" style="font-size:14px;"><%= user.fullname %></div>
-                            <small class="text-muted" style="font-size:11px;">นิสิต (<%= user.student_id %>)</small>
+                            <div class="fw-bold" style="font-size:14px;"><%= user.stu_name %></div>
+                            <small class="text-muted" style="font-size:11px;">นิสิต (<%= user.stu_id %>)</small>
                         </div>
                         <img src="/images/student_icon.png" class="rounded-circle border" width="40" height="40" onerror="this.src='https://ui-avatars.com/api/?name=<%= user.fullname %>&background=dd1f28&color=fff'">
                     </a>
@@ -78,13 +78,12 @@
                 <div class="card card-custom p-4 text-center h-100">
                     <img src="/images/student_icon.png" class="rounded-circle mx-auto mb-3 border border-4 border-light shadow-sm" width="120" onerror="this.src='https://ui-avatars.com/api/?name=<%= user.fullname %>&background=dd1f28&color=fff'">
                     
-                    <h5 class="fw-bold mb-1"><%= user.fullname %></h5>
-                    <p class="text-muted mb-3">รหัสนิสิต <%= user.student_id %></p>
+                    <h5 class="fw-bold mb-1"><%= user.stu_name %></h5>
+                    <p class="text-muted mb-3">รหัสนิสิต <%= user.stu_id %></p>
                     
                     <div class="text-start bg-light p-3 rounded-3 mt-2 font-monospace" style="font-size: 0.9rem;">
-                        <div class="mb-2 d-flex justify-content-between"><span>คณะ:</span> <span class="fw-bold text-dark"><%= user.faculty %></span></div>
-                        <div class="mb-2 d-flex justify-content-between"><span>สาขา:</span> <span class="fw-bold text-dark"><%= user.major %></span></div>
-                        <div class="mb-2 d-flex justify-content-between"><span>GPAX:</span> <span class="fw-bold text-success"><%= user.gpax %></span></div>
+                        <div class="mb-2 d-flex justify-content-between"><span>คณะ:</span> <span class="fw-bold text-dark"><span class="fw-bold text-dark">วิทยาลัยนวัตกรรมสื่อสารสังคม</span></span></div>
+                        <div class="mb-2 d-flex justify-content-between"><span>สาขา:</span> <span class="fw-bold text-dark"><%= user.stu_major %></span></div>
                         <div class="mb-0 d-flex justify-content-between"><span>ที่ปรึกษา:</span> <span class="fw-bold text-dark"><%= user.adviser_name %></span></div>
                     </div>
                 </div>

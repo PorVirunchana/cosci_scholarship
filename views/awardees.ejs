@@ -121,20 +121,20 @@ body {
         <li class="nav-item"><a class="nav-link" href="/student_loan"><i class="fa-solid fa-hand-holding-dollar me-1"></i> กยศ.</a></li>
       </ul>
 
-      <div class="dropdown">
-        <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark" id="userDrop" data-bs-toggle="dropdown">
-            <div class="text-end me-2 lh-1 d-none d-sm-block">
-                <div class="fw-bold" style="font-size:14px;"><%= user.fullname %></div>
-                <small class="text-muted" style="font-size:11px;">นิสิต (<%= user.student_id %>)</small>
+        <div class="dropdown">
+                <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark" id="userDrop" data-bs-toggle="dropdown">
+                <div class="text-end me-2 lh-1 d-none d-sm-block">
+                <div class="fw-bold" style="font-size:14px;"><%= user.stu_name %></div>
+            <small class="text-muted" style="font-size:11px;">นิสิต (<%= user.stu_id %>)</small>
             </div>
             <img src="/images/student_icon.png" class="rounded-circle border" width="40" height="40" onerror="this.src='https://ui-avatars.com/api/?name=<%= user.fullname %>&background=dd1f28&color=fff'">
-        </a>
-        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
-            <li><a class="dropdown-item" href="/profile"><i class="fa-regular fa-id-card me-2"></i> ข้อมูลส่วนตัว</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item text-danger" href="/logout"><i class="fa-solid fa-right-from-bracket me-2"></i> ออกจากระบบ</a></li>
-        </ul>
-      </div>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                <li><a class="dropdown-item" href="/profile"><i class="fa-regular fa-id-card me-2"></i> ข้อมูลส่วนตัว</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="/logout"><i class="fa-solid fa-right-from-bracket me-2"></i> ออกจากระบบ</a></li>
+            </ul>
+        </div>
     </div>
   </div>
 </nav>
@@ -181,8 +181,8 @@ body {
                         %>
                             <tr class="awardee-row">
                                 <th scope="row"><%= index + 1 %></th>
-                                <td class="awardee-name"><strong><%= item.awardee_name %></strong></td>
-                                <td class="awardee-major"><%= item.awardee_major %></td>
+                                <td class="awardee-name"><strong><%= item.stu_name %></strong></td>
+                                <td class="awardee-major"><%= item.stu_major %></td>
                                 <td class="awardee-scholarship">
                                     <span class="badge <%= badgeClass %>">
                                         <%= item.scholarship_name %>
