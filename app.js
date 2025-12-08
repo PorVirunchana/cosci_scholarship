@@ -36,14 +36,12 @@ const db = mysql.createConnection({
 });
 
 
-
-db.getConnection((err, connection) => {
+db.connect((err) => {
   if (err) {
-    console.error('MySQL connection error:', err);
-    throw err; 
+    console.error("❌ MySQL connection error:", err);
+    return;
   }
-  console.log('✅ Connected to MySQL Database: swu_scholarship2 (pool)');
-  connection.release();
+  console.log("✅ Connected to MySQL Database!");
 });
 
 // ==========================================
