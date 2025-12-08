@@ -8,6 +8,8 @@ const nodemailer = require('nodemailer');
 const app = express();
 const requestIp = require('request-ip'); 
 const moment = require('moment'); // ✅ จำเป็นสำหรับ Counter
+require("dotenv").config();
+
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
@@ -25,15 +27,15 @@ app.use(session({
 }));
 
 // Database connection
-const db = mysql.createPool({
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "swu_scholarship2",
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+const db = mysql.createConnection({
+   host: process.env.DB_HOST,
+   user: process.env.DB_USER,
+   password: process.env.DB_PASS,
+   database: process.env.DB_NAME,
+   port: process.env.DB_PORT
 });
+
+
 
 db.getConnection((err, connection) => {
   if (err) {
