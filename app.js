@@ -355,6 +355,11 @@ app.post("/login", (req, res) => {
         
         if (result.length > 0) {
             const user = result[0];
+
+            if (user.stu_status !== "o") {
+                return res.render("login", { message: "❌ คุณไม่มีสิทธิ์เข้าถึงระบบ" });
+            }
+            // ❌ ถ้า status = x → ไม่มีสิทธิ์
             const match = await bcrypt.compare(password, user.stu_pass);
             if (!match) return res.render("login", { message: "❌ รหัสผ่านไม่ถูกต้อง" });
             req.session.user = user;
@@ -366,6 +371,11 @@ app.post("/login", (req, res) => {
         db.query("SELECT * FROM staff WHERE staff_buasri=?", [buasri], async (err, sResult) => {
             if (sResult.length > 0) {
                 const staff = sResult[0];
+                // ❌ ถ้า status = x → ไม่มีสิทธิ์
+                if (staff.staff_status !== "o") {
+                    return res.render("login", { message: "❌ คุณไม่มีสิทธิ์เข้าถึงระบบ" });
+                }
+
                 const match = await bcrypt.compare(password, staff.staff_pass);
                 if (!match) return res.render("login", { message: "❌ รหัสผ่าน จนท. ผิด" });
                 req.session.user = staff;
