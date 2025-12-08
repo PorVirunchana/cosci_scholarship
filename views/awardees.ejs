@@ -37,6 +37,24 @@ body {
     border-radius: 8px; padding: 8px 16px !important; transition: all 0.2s; 
 }
 .nav-link:hover, .nav-link.active { background-color: #ffe6e6; color: var(--swu-red); }
+.navbar-collapse {
+    background-color: white; 
+    padding-left: 20px; 
+    padding-right: 20px;
+    padding-bottom: 10px; 
+}
+
+/* ✅ โค้ดเสริม: เพื่อให้ nav-item เต็มความกว้างเมื่ออยู่ในเมนู Hamburger */
+@media (max-width: 991.98px) {
+    .navbar-nav {
+        /* ให้รายการลิงก์หลักเต็มความกว้าง */
+        width: 100%; 
+    }
+    .nav-item {
+        /* ทำให้แต่ละลิงก์เต็มความกว้างและมีระยะห่าง */
+        margin-bottom: 5px; 
+    }
+}
 
 /* --- Table Style for Awardees --- */
 .awardees-table-container {
