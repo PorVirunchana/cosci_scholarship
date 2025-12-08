@@ -32,16 +32,22 @@ const db = mysql.createPool({
    user: process.env.DB_USER,
    password: process.env.DB_PASS,
    database: process.env.DB_NAME,
-   port: process.env.DB_PORT
+   port: process.env.DB_PORT,
+   // เพิ่มค่าเพื่อทดสอบ Pool ทันที (optional)
+   waitForConnections: true, 
+   connectionLimit: 1 
 });
 
+// ✅ เพิ่มโค้ดส่วนนี้เพื่อดักจับ Log การเชื่อมต่อ
+db.on('connection', (connection) => {
+    console.log('✅ Connection Pool: ได้สร้างการเชื่อมต่อใหม่แล้ว');
+    // หากต้องการใช้ connection นี้เพื่อตรวจสอบอย่างอื่น สามารถทำได้
+    // connection.ping((err) => { ... });
+});
 
-db.connect((err) => {
-  if (err) {
-    console.error("❌ MySQL connection error:", err);
-    return;
-  }
-  console.log("✅ Connected to MySQL Database!");
+db.on('error', (err) => {
+    console.error('❌ Connection Pool Error (Fatal):', err);
+    // กรณีที่เกิดข้อผิดพลาดร้ายแรงกับ Pool
 });
 
 // ==========================================
