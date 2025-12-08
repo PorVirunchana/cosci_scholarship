@@ -21,7 +21,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(express.static("public"));
 app.use(session({
-  secret: "mySecretKey",
+  secret: "gwapor322466",
   resave: false,
   saveUninitialized: false,
 }));
