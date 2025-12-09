@@ -151,44 +151,69 @@
         </div>
     </div>
 
- <!-- Modal เพิ่มทุนใหม่ -->
-    <div class="modal fade" id="addModal" tabindex="-1">
-        <div class="modal-dialog modal-lg"> 
-            <div class="modal-content">
-                <form action="/add_scholarship" method="POST"> 
-                    <div class="modal-header">
-                        <h5 class="modal-title fw-bold">เพิ่มประกาศทุนใหม่</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog modal-lg"> 
+        <div class="modal-content">
+            <form action="/add_scholarship" method="POST" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">เพิ่มประกาศทุนใหม่</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <div class="modal-body">
+                    
+                    <div class="mb-4 p-3 bg-light rounded-3 border">
+                        <label class="form-label fw-bold mb-2">เลือกวิธีการเพิ่มข้อมูล</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="input_method" id="manualInput" value="manual" checked>
+                            <label class="form-check-label" for="manualInput">
+                                <i class="fa-solid fa-keyboard me-1"></i> กรอกข้อมูลด้วยตนเอง (1 ทุน)
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="input_method" id="fileImport" value="import">
+                            <label class="form-check-label" for="fileImport">
+                                <i class="fa-solid fa-file-excel me-1"></i> นำเข้าจากไฟล์ Excel/CSV
+                            </label>
+                        </div>
                     </div>
-                    <div class="modal-body">
+                    
+                    <div id="import-section" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">นำเข้าข้อมูลจากไฟล์</label>
+                            <input type="file" class="form-control" name="import_file" id="import_file_input" accept=".xlsx,.xls,.csv">
+                            <small class="text-muted">รองรับไฟล์ Excel (.xlsx, .xls) หรือ CSV</small>
+                        </div>
                         
-                        <!-- เพิ่ม: แถวสำหรับ รหัสทุน และ ชื่อทุน -->
+                    </div>
+
+                    <div id="manual-section">
                         <div class="row mb-3">
                             <div class="col-md-4">
                                 <label class="form-label fw-bold">รหัสทุน (ID)</label>
-                                <input type="text" class="form-control" name="scholarship_id" placeholder="เช่น SCH67001" required>
+                                <input type="text" class="form-control manual-input" name="scholarship_id" placeholder="เช่น SCH67001">
                             </div>
                             <div class="col-md-8">
                                 <label class="form-label fw-bold">ชื่อทุนการศึกษา</label>
-                                <input type="text" class="form-control" name="scholarship_name" placeholder="เช่น ทุนเรียนดี ประจำปี 2567..." required>
+                                <input type="text" class="form-control manual-input" name="scholarship_name" placeholder="เช่น ทุนเรียนดี ประจำปี 2567...">
                             </div>
                         </div>
 
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">ปีการศึกษา</label>
-                                <input type="number" class="form-control" name="scholarship_year" value="2567" required>
+                                <input type="number" class="form-control manual-input" name="scholarship_year" value="2567">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">งบประมาณ / มูลค่าทุน (บาท)</label>
-                                <input type=“text” class="form-control" name="scholarship_amount" placeholder="เช่น 20000" required>
+                                <input type=“text” class="form-control manual-input" name="scholarship_amount" placeholder="เช่น 20000">
                             </div>
                         </div>
 
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">ประเภททุน</label>
-                                <select class="form-select" name="scholarship_type">
+                                <select class="form-select manual-input" name="scholarship_type">
                                     <option value="ทุนภายในมหาวิทยาลัย">ทุนภายในมหาวิทยาลัย</option>
                                     <option value="ทุนภายในวิทยาลัยนวัตกรรมสื่อสารสังคม">ทุนภายในวิทยาลัยนวัตกรรมสื่อสารสังคม</option>
                                     <option value="ทุนจากหน่วยงานภายนอก">ทุนจากหน่วยงานภายนอก</option>
@@ -197,20 +222,73 @@
 
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">ช่วงเวลารับสมัคร</label>
-                                <input type="text" class="form-control" name="apply_duration" placeholder="เช่น 1 - 30 พ.ย. 67" required>
+                                <input type="text" class="form-control manual-input" name="apply_duration" placeholder="เช่น 1 - 30 พ.ย. 67">
                             </div>
                         </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                        <button type="submit" class="btn btn-success">
-                            <i class="fa-solid fa-save me-2"></i>บันทึกข้อมูล
-                        </button>
                     </div>
-                </form>
-            </div>
+                    
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fa-solid fa-save me-2"></i>บันทึกข้อมูล
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const manualRadio = document.getElementById('manualInput');
+        const importRadio = document.getElementById('fileImport');
+        
+        const manualSection = document.getElementById('manual-section');
+        const importSection = document.getElementById('import-section');
+        
+        // เลือก Input ทั้งหมดที่มี class manual-input 
+        const manualInputs = manualSection.querySelectorAll('.manual-input');
+        const importFileInput = document.getElementById('import_file_input');
+
+        function toggleInputMode(mode) {
+            if (mode === 'manual') {
+                manualSection.style.display = 'block';
+                importSection.style.display = 'none';
+                
+                // 1. กำหนดให้ช่องกรอกเองเป็น required
+                manualInputs.forEach(el => el.required = true);
+                // 2. ลบ required ออกจากช่อง Import
+                importFileInput.required = false;
+                importFileInput.value = ''; // เคลียร์ไฟล์ที่เลือกไว้
+                
+
+            } else if (mode === 'import') {
+                manualSection.style.display = 'none';
+                importSection.style.display = 'block';
+                
+                // 1. ลบ required ออกจากช่องกรอกเอง (และเคลียร์ค่า)
+                manualInputs.forEach(el => {
+                    el.required = false;
+                    // ล้างค่าในช่องกรอกเองเพื่อป้องกันการส่งข้อมูลที่ไม่จำเป็น
+                    if (el.tagName === 'INPUT') el.value = ''; 
+                    else if (el.tagName === 'SELECT') el.selectedIndex = 0; // เลือกตัวเลือกแรก
+                });
+                
+                // 2. กำหนดให้ช่อง Import เป็น required
+                importFileInput.required = true;
+            }
+        }
+
+        // 1. ตั้งค่าเริ่มต้นเมื่อ Modal เปิด
+        toggleInputMode(manualRadio.checked ? 'manual' : 'import');
+
+        // 2. จัดการเมื่อผู้ใช้คลิกเลือก
+        manualRadio.addEventListener('change', () => toggleInputMode('manual'));
+        importRadio.addEventListener('change', () => toggleInputMode('import'));
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -149,9 +149,9 @@ body {
     </div>
 
     <!-- Stats -->
-    <div class="row mb-4">
+        <div class="row mb-4">
         <div class="col-12 text-center">
-            <h5 class="fw-bold mb-3 text-secondary"><i class="fa-solid fa-chart-pie me-2"></i>ภาพรวมสถิติการได้รับทุนการศึกษา (3 ปีย้อนหลัง)</h5>
+            <h5 class="fw-bold mb-3 text-secondary"><i class="fa-solid fa-chart-pie me-2"></i>ภาพรวมสถิติการได้รับทุนการศึกษา (<%= stats.length %> ปีย้อนหลัง)</h5>
             <div class="stat-card-container">
                 <% stats.forEach(function(item) { %>
                     <div class="stat-card">
@@ -175,72 +175,96 @@ body {
     </div>
 
     <!-- Lists -->
-    <div class="bg-white p-4 rounded shadow-sm">
-        <ul class="nav nav-tabs mb-4 justify-content-start" id="scholarshipTab" role="tablist">
-            <li class="nav-item">
-                <button class="nav-link active" id="tab1" data-bs-toggle="tab" data-bs-target="#content1" type="button">
-                    <i class="fa-solid fa-building-columns me-2"></i>ทุนภายในมหาวิทยาลัย
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" id="tab2" data-bs-toggle="tab" data-bs-target="#content2" type="button">
-                    <i class="fa-solid fa-laptop-code me-2"></i>ทุนคณะ
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" id="tab3" data-bs-toggle="tab" data-bs-target="#content3" type="button">
-                    <i class="fa-solid fa-hand-holding-heart me-2"></i>ทุนภายนอก
-                </button>
-            </li>
-        </ul>
+        <div class="bg-white p-4 rounded shadow-sm">
+            <ul class="nav nav-tabs mb-4 justify-content-start" id="scholarshipTab" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" id="tab1" data-bs-toggle="tab" data-bs-target="#content1" type="button">
+                        <i class="fa-solid fa-building-columns me-2"></i>ทุนภายในมหาวิทยาลัย
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tab2" data-bs-toggle="tab" data-bs-target="#content2" type="button">
+                        <i class="fa-solid fa-laptop-code me-2"></i>ทุนคณะ
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tab3" data-bs-toggle="tab" data-bs-target="#content3" type="button">
+                        <i class="fa-solid fa-hand-holding-heart me-2"></i>ทุนภายนอก
+                    </button>
+                </li>
+            </ul>
 
-        <div class="tab-content" id="scholarshipTabContent">
-            
-            <!-- Tab 1: ทุนภายในมหาลัย (แดงจาง) -->
-            <div class="tab-pane fade show active" id="content1">
-                <div class="row g-4" id="list1">
-                    <% scholarships.forEach(function(item) { %>
-                        <% if (item.scholarship_type === 'ทุนภายในมหาวิทยาลัย') { %>
+            <div class="tab-content" id="scholarshipTabContent">
+                
+                <div class="tab-pane fade show active" id="content1">
+                    <div class="row g-4" id="list1">
+                        <% 
+                            scholarships
+                            .filter(item => item.scholarship_type === 'ทุนภายในมหาวิทยาลัย')
+                            .forEach(function(item) { 
+                        %>
                             <%- include('scholarship_card', { 
                                 item: item, 
                                 badgeClass: 'badge-solid badge-uni', 
                                 badgeText: 'ทุนมหาลัย'
                             }) %>
+                        <% }); %>
+                        <% if (scholarships.filter(item => item.scholarship_type === 'ทุนภายในมหาวิทยาลัย').length === 0) { %>
+                            <div class="col-12 text-center text-muted py-5">
+                                <i class="fa-solid fa-box-open fa-2x mb-3"></i>
+                                <p>ไม่พบรายการทุนภายในมหาวิทยาลัยในขณะนี้</p>
+                            </div>
                         <% } %>
-                    <% }); %>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Tab 2: ทุนภายในวิทยาลัยนวัตกรรมฯ (เขียวจาง) -->
-            <div class="tab-pane fade" id="content2">
-                <div class="row g-4" id="list2">
-                    <% scholarships.forEach(function(item) { %>
-                        <% if (item.scholarship_type === 'ทุนภายในวิทยาลัยนวัตกรรมสื่อสารสังคม') { %>
+                <div class="tab-pane fade" id="content2">
+                    <div class="row g-4" id="list2">
+                        <% 
+                            scholarships
+                            .filter(item => item.scholarship_type === 'ทุนภายในวิทยาลัยนวัตกรรมสื่อสารสังคม')
+                            .forEach(function(item) { 
+                        %>
                             <%- include('scholarship_card', { 
                                 item: item, 
                                 badgeClass: 'badge-solid badge-faculty', 
                                 badgeText: 'ทุนคณะ'
                             }) %>
+                        <% }); %>
+                        <% if (scholarships.filter(item => item.scholarship_type === 'ทุนภายในวิทยาลัยนวัตกรรมสื่อสารสังคม').length === 0) { %>
+                            <div class="col-12 text-center text-muted py-5">
+                                <i class="fa-solid fa-box-open fa-2x mb-3"></i>
+                                <p>ไม่พบรายการทุนภายในคณะในขณะนี้</p>
+                            </div>
                         <% } %>
-                    <% }); %>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Tab 3: ทุนจากหน่วยงานภายนอก (ฟ้าจาง) -->
-            <div class="tab-pane fade" id="content3">
-                <div class="row g-4" id="list3">
-                    <% scholarships.forEach(function(item) { %>
-                        <% if (item.scholarship_type === 'ทุนจากหน่วยงานภายนอก') { %>
+                <div class="tab-pane fade" id="content3">
+                    <div class="row g-4" id="list3">
+                        <% 
+                            scholarships
+                            .filter(item => item.scholarship_type === 'ทุนจากหน่วยงานภายนอก')
+                            .forEach(function(item) { 
+                        %>
                             <%- include('scholarship_card', { 
                                 item: item, 
                                 badgeClass: 'badge-solid badge-external', 
                                 badgeText: 'ทุนภายนอก'
                             }) %>
+                        <% }); %>
+                        <% if (scholarships.filter(item => item.scholarship_type === 'ทุนจากหน่วยงานภายนอก').length === 0) { %>
+                            <div class="col-12 text-center text-muted py-5">
+                                <i class="fa-solid fa-box-open fa-2x mb-3"></i>
+                                <p>ไม่พบรายการทุนจากหน่วยงานภายนอกในขณะนี้</p>
+                            </div>
                         <% } %>
-                    <% }); %>
+                    </div>
                 </div>
+
             </div>
 
+            </div>
         </div>
     </div>
 </div>

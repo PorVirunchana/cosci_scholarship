@@ -10,6 +10,10 @@ const requestIp = require('request-ip');
 const moment = require('moment'); // ✅ จำเป็นสำหรับ Counter
 require("dotenv").config();
 
+const fs = require('fs');
+const multer = require('multer');
+const xlsx = require('xlsx');
+const upload = multer({ dest: 'uploads/' });
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
@@ -33,21 +37,17 @@ const db = mysql.createPool({
    password: process.env.DB_PASS,
    database: process.env.DB_NAME,
    port: process.env.DB_PORT,
-   // เพิ่มค่าเพื่อทดสอบ Pool ทันที (optional)
    waitForConnections: true, 
-   connectionLimit: 1 
+   connectionLimit: 10 
 });
 
 // ✅ เพิ่มโค้ดส่วนนี้เพื่อดักจับ Log การเชื่อมต่อ
 db.on('connection', (connection) => {
     console.log('✅ Connection Pool: ได้สร้างการเชื่อมต่อใหม่แล้ว');
-    // หากต้องการใช้ connection นี้เพื่อตรวจสอบอย่างอื่น สามารถทำได้
-    // connection.ping((err) => { ... });
 });
 
 db.on('error', (err) => {
     console.error('❌ Connection Pool Error (Fatal):', err);
-    // กรณีที่เกิดข้อผิดพลาดร้ายแรงกับ Pool
 });
 
 // ==========================================
@@ -79,10 +79,10 @@ app.use(async (req, res, next) => {
             console.log("⚠️ IP นี้เข้าชมแล้ว (ข้ามการบันทึก)");
         }
 
-        // 2. ดึงยอดวันนี้ (บรรทัดนี้ที่น่าจะหายไปครับ)
+        // 2. ดึงยอดวันนี้
         const todayRes = await query('SELECT COUNT(*) as count FROM counter WHERE visit_date = ?', [today]);
         
-        // 3. ดึงยอดทั้งหมด (และบรรทัดนี้)
+        // 3. ดึงยอดทั้งหมด
         const totalRes = await query('SELECT COUNT(*) as count FROM counter');
 
         console.log(`📊 สถิติ -> วันนี้: ${todayRes[0].count} | รวม: ${totalRes[0].count}`);
@@ -141,69 +141,127 @@ app.get("/register", (req, res) => {
     });
 });
 
-// ✅ DASHBOARD
+// ==========================================
+// ✅ DASHBOARD (รวมตรรกะทั้งหมดและใช้ async/await)
+// ==========================================
 app.get("/dashboard", (req, res) => {
+    // 1. ตรวจสอบ Session
     if (!req.session.user) return res.redirect("/login");
+
     const buasri = req.session.user.stu_buasri;
     const stu_id = req.session.user.stu_id;
 
-    // 1. Join Major เพื่อเอาชื่อสาขา (maj_th_name)
+    // ตัวแปรผลลัพธ์
+    let user = {};
+    let latestYear = new Date().getFullYear() + 543; // default
+    let newScholarships = [];
+    let historyResults = [];
+
+    // ===========================
+    // 2. ดึงข้อมูลนักศึกษา + ชื่อสาขา
+    // ===========================
     const sqlStudent = `
         SELECT student.*, major.maj_th_name 
         FROM student 
         LEFT JOIN major ON student.stu_major = major.maj_id 
         WHERE student.stu_buasri = ?
     `;
+    db.query(sqlStudent, [buasri], (err, studentResults) => {
+        if (err) {
+            console.error("❌ Dashboard DB Error (Student):", err);
+            return res.status(500).send("Server Error: Cannot load Dashboard data.");
+        }
 
-    db.query(sqlStudent, [buasri], (err, userResults) => {
-        if (err || userResults.length === 0) {
+        if (studentResults.length === 0) {
             req.session.destroy();
             return res.redirect("/login");
         }
 
-        const student = userResults[0];
+        const student = studentResults[0];
 
-        // 2. หาชื่ออาจารย์จาก staff table
-        const queryAdvisor = `SELECT staff_name FROM staff WHERE staff_id = ?`;
-        db.query(queryAdvisor, [student.stu_advisor], (err, staffResult) => {
-            const adviserName = (staffResult && staffResult.length > 0) ? staffResult[0].staff_name : "-";
+        // ===========================
+        // 3. ดึงชื่ออาจารย์ที่ปรึกษา
+        // ===========================
+        const sqlAdvisor = `SELECT staff_name FROM staff WHERE staff_id = ?`;
+        db.query(sqlAdvisor, [student.stu_advisor], (err, staffResults) => {
+            if (err) {
+                console.error("❌ Dashboard DB Error (Advisor):", err);
+                return res.status(500).send("Server Error: Cannot load Dashboard data.");
+            }
 
-            const user = {
+            const adviserName = (staffResults.length > 0) ? staffResults[0].staff_name : "-";
+
+            user = {
                 stu_id: student.stu_id,
                 stu_name: student.stu_name,
-                stu_major: student.maj_th_name || '-', // ใช้ชื่อสาขาภาษาไทย
+                stu_major: student.maj_th_name || "-",
                 adviser_name: adviserName
             };
 
-            // 3. ทุนใหม่
-            const sqlNew = `
-                (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในมหาวิทยาลัย' LIMIT 1)
-                UNION
-                (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนภายในวิทยาลัยนวัตกรรมสื่อสารสังคม' LIMIT 1)
-                UNION
-                (SELECT * FROM scholarship_detail WHERE scholarship_year = 2567 AND scholarship_type = 'ทุนจากหน่วยงานภายนอก' LIMIT 1)
-            `;
+            // ===========================
+            // 4. ดึงปีล่าสุดของทุน
+            // ===========================
+            const sqlLatestYear = `SELECT MAX(scholarship_year) AS latest_year FROM scholarship_detail`;
+            db.query(sqlLatestYear, (err, yearResults) => {
+                if (err) {
+                    console.error("❌ Dashboard DB Error (Latest Year):", err);
+                    return res.status(500).send("Server Error: Cannot load Dashboard data.");
+                }
 
-            db.query(sqlNew, (err, newScholarships) => {
-                // 4. ประวัติทุน
-                const sqlHistory = `
-                    SELECT sd.scholarship_name, sd.scholarship_year, sd.scholarship_amount
-                    FROM student ac
-                    JOIN scholarship_awardees aw ON ac.stu_id = aw.stu_id
-                    JOIN scholarship_detail sd ON aw.scholarship_id = sd.scholarship_id
-                    WHERE ac.stu_id = ?
-                    UNION
-                    SELECT 'กู้ยืมเพื่อการศึกษา (กยศ.)' AS scholarship_name, slf_year AS scholarship_year, slf_amount AS scholarship_amount
-                    FROM slf_detail WHERE stu_id = ? AND slf_pending = 1
-                    ORDER BY scholarship_year DESC
+                latestYear = (yearResults.length > 0 && yearResults[0].latest_year) 
+                                ? yearResults[0].latest_year 
+                                : latestYear;
+
+                // ===========================
+                // 5. ดึงทุนใหม่
+                // ===========================
+                const sqlNewScholarships = `
+                    SELECT * FROM scholarship_detail 
+                    WHERE scholarship_year = ?
+                    ORDER BY scholarship_type, scholarship_id DESC
                 `;
+                db.query(sqlNewScholarships, [latestYear], (err, scholarships) => {
+                    if (err) {
+                        console.error("❌ Dashboard DB Error (New Scholarships):", err);
+                        return res.status(500).send("Server Error: Cannot load Dashboard data.");
+                    }
 
-                db.query(sqlHistory, [stu_id, stu_id], (err, historyResults) => {
-                    // ส่ง visitorStats ไปด้วย (จริงๆ มันอยู่ใน locals แล้ว แต่ส่งซ้ำก็ไม่เสียหาย)
-                    res.render("dashboard", { 
-                        user: user,
-                        newScholarships: newScholarships || [],
-                        history: historyResults || [] 
+                    newScholarships = scholarships;
+
+                    // ===========================
+                    // 6. ดึงประวัติทุน (รวมทุน + กยศ pending)
+                    // ===========================
+                    const sqlHistory = `
+                        SELECT * FROM (
+                            SELECT sd.scholarship_name, sd.scholarship_year, sd.scholarship_amount
+                            FROM student ac
+                            JOIN scholarship_awardees aw ON ac.stu_id = aw.stu_id
+                            JOIN scholarship_detail sd ON aw.scholarship_id = sd.scholarship_id
+                            WHERE ac.stu_id = ?
+                            UNION
+                            SELECT 'กู้ยืมเพื่อการศึกษา (กยศ.)' AS scholarship_name, slf_year AS scholarship_year, slf_amount AS scholarship_amount
+                            FROM slf_detail 
+                            WHERE stu_id = ? AND slf_pending = 1
+                        ) AS history
+                        ORDER BY scholarship_year DESC
+                    `;
+                    db.query(sqlHistory, [stu_id, stu_id], (err, history) => {
+                        if (err) {
+                            console.error("❌ Dashboard DB Error (History):", err);
+                            return res.status(500).send("Server Error: Cannot load Dashboard data.");
+                        }
+
+                        historyResults = history;
+
+                        // ===========================
+                        // 7. Render หน้า dashboard
+                        // ===========================
+                        res.render("dashboard", {
+                            user: user,
+                            latestYear: latestYear,
+                            newScholarships: newScholarships || [],
+                            history: historyResults || []
+                        });
                     });
                 });
             });
@@ -217,13 +275,30 @@ app.get("/scholarships", (req, res) => {
     db.query(sql, (err, results) => {
         if (err) return res.send("Database Error");
         
-        const targetYears = [2567, 2566, 2565];
-        const stats = targetYears.map(year => {
-            const sInYear = results.filter(s => s.scholarship_year == year);
-            const sumApplicants = sInYear.reduce((sum, item) => sum + (item.total_applicants || 0), 0);
-            const sumAwardees = sInYear.reduce((sum, item) => sum + (item.total_awardees || 0), 0);
-            return { year, count: sInYear.length, total_applicants: sumApplicants, total_awardees: sumAwardees };
+        // 1. สร้าง Object เพื่อจัดกลุ่มข้อมูลตามปี (Grouping)
+        const statsMap = {};
+
+        results.forEach(s => {
+            const year = s.scholarship_year;
+            // ตรวจสอบว่ามี Object สำหรับปีนั้น ๆ หรือยัง
+            if (!statsMap[year]) {
+                statsMap[year] = { 
+                    year: year, 
+                    count: 0, 
+                    total_applicants: 0, 
+                    total_awardees: 0 
+                };
+            }
+            
+            // 2. คำนวณสถิติ
+            statsMap[year].count += 1; 
+            statsMap[year].total_applicants += (s.total_applicants || 0); 
+            statsMap[year].total_awardees += (s.total_awardees || 0);
         });
+
+        // 3. แปลงจาก Object ให้เป็น Array และจัดเรียง (จากปีมากไปน้อย)
+        let stats = Object.values(statsMap); 
+        stats.sort((a, b) => b.year - a.year); 
 
         res.render("scholarships", { scholarships: results, stats: stats, user: req.session.user });
     });
@@ -270,6 +345,7 @@ app.get("/student_loan", (req, res) => {
         });
     });
 });
+
 
 // ✅ PROFILE
 app.get("/profile", (req, res) => {
@@ -449,13 +525,123 @@ app.post("/api/forgot/reset-password", async (req, res) => {
 });
 
 // ADD SCHOLARSHIP (Staff)
-app.post("/add_scholarship", (req, res) => {
-    const { scholarship_id, scholarship_name, scholarship_year, scholarship_amount, scholarship_type, apply_duration } = req.body;
-    const sql = `INSERT INTO scholarship_detail (scholarship_id, scholarship_name, scholarship_year, scholarship_amount, scholarship_type, apply_duration) VALUES (?, ?, ?, ?, ?, ?)`;   
-    db.query(sql, [scholarship_id, scholarship_name, scholarship_year, scholarship_amount, scholarship_type, apply_duration], (err, result) => {
-        if (err) { console.error("Add Error:", err); return res.status(500).send("DB Error"); }
-        res.redirect("/staffmanage");
-    });
+app.post("/add_scholarship", upload.single('import_file'), (req, res) => {
+    // ----------------------------------------------------
+    // A. ส่วนที่ 1: ตรวจสอบและจัดการไฟล์ Excel ที่ถูก Import
+    // **(ส่วนนี้ถูกต้องแล้วและมีการตัดหัวตารางออก)**
+    // ----------------------------------------------------
+    if (req.file && req.body.input_method === 'import') { 
+        try {
+            const filePath = req.file.path;
+            const workbook = xlsx.readFile(filePath);
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+
+            // อ่านข้อมูลทั้งหมด, data[0] คือ Header
+            const data = xlsx.utils.sheet_to_json(sheet, { header: 1 }); 
+            
+            const headers = data[0]; 
+            // ตัดหัวตาราง (แถวแรก) ออก แล้ว Map ข้อมูลที่เหลือ
+            const scholarshipsData = data.slice(1).map(row => { 
+                const rowObject = {};
+                // Mapping ข้อมูล
+                rowObject.scholarship_id = row[headers.indexOf('scholarship_id')]; 
+                rowObject.scholarship_name = row[headers.indexOf('scholarship_name')];
+                rowObject.scholarship_type = row[headers.indexOf('scholarship_type')];
+                rowObject.scholarship_year = req.body.scholarship_year || new Date().getFullYear() + 543; 
+                rowObject.scholarship_semester = row[headers.indexOf('scholarship_semester')];
+                rowObject.scholarship_amount = row[headers.indexOf('scholarship_amount')] || 0; 
+                rowObject.apply_duration = row[headers.indexOf('apply_duration')];
+                rowObject.total_applicants = row[headers.indexOf('total_applicants')] || 0;
+                rowObject.total_awardees = row[headers.indexOf('total_awardees')] || 0;
+                
+                return rowObject;
+            }).filter(item => item.scholarship_id); 
+
+            const totalToInsert = scholarshipsData.length;
+
+            if (totalToInsert > 0) {
+                // เตรียม values สำหรับ Batch Insert
+                const values = scholarshipsData.map(item => [
+                    item.scholarship_id,
+                    item.scholarship_name,
+                    item.scholarship_type, // ตำแหน่งใน SQL ต้องตรงกัน
+                    item.scholarship_year,
+                    item.scholarship_semester,
+                    item.scholarship_amount,
+                    item.apply_duration,
+                    item.total_applicants || 0,
+                    item.total_awardees || 0
+                ]);
+
+                // SQL: 8 คอลัมน์
+                const sqlBatch = `
+                    INSERT INTO scholarship_detail 
+                    (scholarship_id, scholarship_name,scholarship_type, scholarship_year,scholarship_semester, scholarship_amount, apply_duration,total_applicants,total_awardees) 
+                    VALUES ?
+                `;
+                
+                db.query(sqlBatch, [values], (err, result) => {
+                    fs.unlinkSync(filePath); 
+                    if (err) {
+                        console.error("Batch Insert Error:", err);
+                        return res.status(500).send("DB Batch Insert Error");
+                    }
+                    return res.redirect("/staffmanage");
+                });
+                
+            } else {
+                fs.unlinkSync(filePath); 
+                return res.redirect("/staffmanage?msg=no_data_in_file");
+            }
+
+        } catch (error) {
+            console.error("File Processing Error:", error);
+            if (req.file && fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path); 
+            }
+            return res.status(500).send("File Processing Error");
+        }
+    } 
+    
+    // ----------------------------------------------------
+    // B. ส่วนที่ 2: จัดการข้อมูลฟอร์มปกติ (Manual Input)
+    // ----------------------------------------------------
+    else {
+        // รับ 8 ค่าจาก req.body
+        const { scholarship_id, scholarship_name,scholarship_type, scholarship_year,scholarship_semester, scholarship_amount, apply_duration,total_applicants,total_awardees} = req.body;
+        
+        if (!scholarship_id || !scholarship_name) {
+             return res.status(400).send("Missing required fields for manual entry");
+        }
+
+        // SQL: 8 คอลัมน์ (Placeholder 8 ตัว)
+        const sql = `
+            INSERT INTO scholarship_detail 
+            (scholarship_id, scholarship_name,scholarship_type, scholarship_year,scholarship_semester, scholarship_amount, apply_duration,total_applicants,total_awardees) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;   
+        // ส่ง 8 ค่า (ต้องตรวจสอบว่าข้อมูลที่ส่งมาครบถ้วนตาม DB Schema)
+        db.query(sql, [
+            scholarship_id, 
+            scholarship_name,
+            scholarship_type, 
+            scholarship_year, 
+            scholarship_semester,
+            scholarship_amount, 
+            apply_duration, 
+            // ถ้าเป็น Manual Input สองค่านี้อาจจะไม่ได้ถูกส่งมาจากฟอร์ม ควรตั้งเป็น 0
+            total_applicants || 0, // ค่าที่ 7
+            total_awardees || 0 // ค่าที่ 8
+        ], (err, result) => {
+            if (err) { 
+                console.error("Manual Add Error:", err); 
+                return res.status(500).send("DB Error"); 
+            }
+            return res.redirect("/staffmanage");
+        });
+        
+    }
 });
 
 app.get('/api/session', (req, res) => {
