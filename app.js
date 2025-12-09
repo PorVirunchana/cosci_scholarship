@@ -53,6 +53,8 @@ db.on('error', (err) => {
 // ==========================================
 // 🔥 Middleware: Counter (แก้ไขแล้ว) 🔥
 // ==========================================
+const promisePool = pool.promise();
+
 app.use(async (req, res, next) => {
     try {
         const clientIp = requestIp.getClientIp(req);
