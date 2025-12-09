@@ -53,40 +53,41 @@ db.on('error', (err) => {
 // ==========================================
 // 🔥 Middleware: Counter (แก้ไขแล้ว) 🔥
 // ==========================================
-const promisePool = pool.promise();
-
 app.use(async (req, res, next) => {
+    // Helper function
+    const query = (sql, params) => {
+        return new Promise((resolve, reject) => {
+            db.query(sql, params, (err, result) => {
+                if (err) reject(err);
+                else resolve(result);
+            });
+        });
+    };
+
     try {
         const clientIp = requestIp.getClientIp(req);
         const today = moment().format('YYYY-MM-DD');
 
         console.log(`👀 มีผู้เข้าชม! IP: ${clientIp} | วันที่: ${today}`);
 
-        // INSERT IGNORE
-        const [insertRes] = await promisePool.query(
-            'INSERT IGNORE INTO counter (ip_address, visit_date) VALUES (?, ?)',
-            [clientIp, today]
-        );
-
+        // 1. บันทึก (INSERT)
+        const insertRes = await query('INSERT IGNORE INTO counter (ip_address, visit_date) VALUES (?, ?)', [clientIp, today]);
+        
         if (insertRes.affectedRows > 0) {
             console.log("✅ บันทึก IP ใหม่สำเร็จ!");
         } else {
             console.log("⚠️ IP นี้เข้าชมแล้ว (ข้ามการบันทึก)");
         }
 
-        // ยอดวันนี้
-        const [todayRes] = await promisePool.query(
-            'SELECT COUNT(*) as count FROM counter WHERE visit_date = ?',
-            [today]
-        );
-
-        // ยอดรวม
-        const [totalRes] = await promisePool.query(
-            'SELECT COUNT(*) as count FROM counter'
-        );
+        // 2. ดึงยอดวันนี้ (บรรทัดนี้ที่น่าจะหายไปครับ)
+        const todayRes = await query('SELECT COUNT(*) as count FROM counter WHERE visit_date = ?', [today]);
+        
+        // 3. ดึงยอดทั้งหมด (และบรรทัดนี้)
+        const totalRes = await query('SELECT COUNT(*) as count FROM counter');
 
         console.log(`📊 สถิติ -> วันนี้: ${todayRes[0].count} | รวม: ${totalRes[0].count}`);
 
+        // 4. ส่งค่าไปหน้าเว็บ
         res.locals.visitorStats = {
             today: todayRes[0].count,
             total: totalRes[0].count
@@ -94,9 +95,10 @@ app.use(async (req, res, next) => {
 
     } catch (err) {
         console.error("❌ Counter Error:", err);
+        // กรณี Error ให้ค่าเป็น 0
         res.locals.visitorStats = { today: 0, total: 0 };
     }
-
+    
     next();
 });
 
@@ -396,18 +398,18 @@ app.post("/login", (req, res) => {
 app.post("/api/change-password", async (req, res) => {
     if (!req.session.user) return res.json({ success: false, message: "Unauthorized" });
     const { currentPassword, newPassword, confirmPassword } = req.body;
-    const email = req.session.user.stu_email;
+    const buasri = req.session.user.stu_buasri;
 
     if (newPassword !== confirmPassword) return res.json({ success: false, message: "รหัสผ่านใหม่ไม่ตรงกัน" });
 
-    db.query("SELECT * FROM student WHERE stu_email = ?", [email], async (err, results) => {
+    db.query("SELECT * FROM student WHERE stu_buasri = ?", [buasri], async (err, results) => {
         if (err || results.length === 0) return res.json({ success: false, message: "User not found" });
         const user = results[0];
         const match = await bcrypt.compare(currentPassword, user.stu_pass);
         if (!match) return res.json({ success: false, message: "รหัสผ่านเดิมไม่ถูกต้อง" });
         
         const hashed = await bcrypt.hash(newPassword, 10);
-        db.query("UPDATE student SET stu_pass = ? WHERE stu_email = ?", [hashed, email], (err) => {
+        db.query("UPDATE student SET stu_pass = ? WHERE stu_buasri = ?", [hashed, buasri], (err) => {
             if (err) return res.json({ success: false, message: "DB Error" });
             res.json({ success: true, message: "เปลี่ยนรหัสผ่านสำเร็จ" });
         });
