@@ -39,37 +39,43 @@ body { background-color: var(--swu-gray); font-family: 'Prompt', sans-serif; col
 <body>
 
 <nav class="navbar navbar-expand-lg fixed-top">
-  <div class="container">
-    <a class="navbar-brand d-flex align-items-center" href="/dashboard">
-        <img src="/images/swu_logo2.png" alt="Logo" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Srinakharinwirot_University_Logo.png/600px-Srinakharinwirot_University_Logo.png'">
-        <span class="ms-2 fs-6 fw-bold text-dark d-none d-md-block">ระบบทุนการศึกษา</span>
-    </a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav me-auto ms-4">
-        <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="fa-solid fa-house me-1"></i> หน้าหลัก</a></li>
-        <li class="nav-item"><a class="nav-link" href="/scholarships"><i class="fa-solid fa-graduation-cap me-1"></i> ทุนการศึกษา</a></li>
-        <li class="nav-item"><a class="nav-link" href="/student_loan"><i class="fa-solid fa-hand-holding-dollar me-1"></i> กยศ.</a></li>
-      </ul>
-      <div class="dropdown">
-        <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark" id="userDrop" data-bs-toggle="dropdown">
-            <div class="text-end me-2 lh-1 d-none d-sm-block">
-                <div class="fw-bold" style="font-size:14px;"><%= user.stu_name %></div>
-                <small class="text-muted" style="font-size:11px;">นิสิต (<%= user.stu_id %>)</small>
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/dashboard">
+                <img src="/images/swu_logo2.png" alt="Logo" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Srinakharinwirot_University_Logo.png/600px-Srinakharinwirot_University_Logo.png'">
+                <span class="ms-2 fs-6 fw-bold text-dark d-none d-md-block">ระบบทุนการศึกษา</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto ms-4">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/dashboard"><i class="fa-solid fa-house me-1"></i> หน้าหลัก</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/scholarships"><i class="fa-solid fa-graduation-cap me-1"></i> ทุนการศึกษา</a>
+                        <li class="nav-item"><a class="nav-link" href="/awardees"><i class="fa-solid fa-award me-1"></i> ผู้ได้รับทุนการศึกษา </a></li>
+                        <li class="nav-item"><a class="nav-link" href="/student_loan"><i class="fa-solid fa-hand-holding-dollar me-1"></i> กยศ.</a></li>
+                    </li>
+                </ul>
+
+                <div class="dropdown">
+                    <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark" id="userDrop" data-bs-toggle="dropdown">
+                        <div class="text-end me-2 lh-1 d-none d-sm-block">
+                            <div class="fw-bold" style="font-size:14px;"><%= user.stu_name %></div>
+                            <small class="text-muted" style="font-size:11px;">นิสิต (<%= user.stu_id %>)</small>
+                        </div>
+                        <img src="/images/student_icon.png" class="rounded-circle border" width="40" height="40" onerror="this.src='https://ui-avatars.com/api/?name=<%= user.fullname %>&background=dd1f28&color=fff'">
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                        <li><a class="dropdown-item" href="/profile"><i class="fa-regular fa-id-card me-2"></i> ข้อมูลส่วนตัว</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="/logout"><i class="fa-solid fa-right-from-bracket me-2"></i> ออกจากระบบ</a></li>
+                    </ul>
+                </div>
             </div>
-            <img src="/images/student_icon.png" class="rounded-circle border" width="40" height="40" onerror="this.src='https://ui-avatars.com/api/?name=<%= user.stu_name %>&background=dd1f28&color=fff'">
-        </a>
-        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
-            <li><a class="dropdown-item active bg-danger text-white" href="/profile"><i class="fa-regular fa-id-card me-2"></i> ข้อมูลส่วนตัว</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item text-danger" href="/logout"><i class="fa-solid fa-right-from-bracket me-2"></i> ออกจากระบบ</a></li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</nav>
+        </div>
+    </nav>
 
 <div class="container py-4 flex-grow-1">
     <div class="row justify-content-center">

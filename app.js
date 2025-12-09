@@ -651,8 +651,9 @@ app.get('/api/session', (req, res) => {
   res.json({});
 });
 
-const port = process.env.PORT || 3000;
+// const port = process.env.PORT || 3000;
 
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Server running on port ${port}`);
-});
+// app.listen(port, '0.0.0.0', () => {
+//   console.log(`Server running on port ${port}`);
+// });
+app.listen(3000, () => console.log("🚀 Server running at http://localhost:3000"));
