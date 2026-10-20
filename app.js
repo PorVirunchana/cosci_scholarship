@@ -25,7 +25,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(express.static("public"));
 app.use(session({
-  secret: "gwapor322466",
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
 }));
@@ -108,11 +108,11 @@ function sendmail(toemail, subject, html) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: 'nongnaphat.ni04@gmail.com',
-      pass: 'ojap tiuj tkta goon'
+      user: process.env.MAIL_USER,
+      pass: process.env.MAIL_PASS
     }
   });
-  transporter.sendMail({ from: 'nongnaphat.ni04@gmail.com', to: toemail, subject, html }, (err, info) => {
+  transporter.sendMail({ from: process.env.MAIL_USER, to: toemail, subject, html }, (err, info) => {
     if(err) console.log(err);
     else console.log('Email sent:', info.response);
   });
